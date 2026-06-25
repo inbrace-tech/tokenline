@@ -1,0 +1,7 @@
+{
+  "statusLine": {
+    "type": "command",
+    "command": "bash $CLAUDE_PROJECT_DIR/tokenline.sh",
+    "refreshInterval": 1
+  }
+}
