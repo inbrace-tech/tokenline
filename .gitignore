@@ -6,10 +6,22 @@ Thumbs.db
 *.swp
 *.swo
 .idea/
-.vscode/
+
+# VS Code: ignore personal files, keep the shared project config
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
 
 # Local scratch
 *.log
 
 # temporary files
 /tmp
+
+# node / build artifacts
+node_modules/
+dist/
+*.tgz
+
+# personal Claude Code overrides (the committed .claude/settings.json is the example)
+.claude/settings.local.json
