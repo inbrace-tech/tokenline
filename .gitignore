@@ -25,3 +25,6 @@ dist/
 
 # personal Claude Code overrides (the committed .claude/settings.json is the example)
 .claude/settings.local.json
+
+# Git worktrees created via Claude Code's EnterWorktree (each lives under .claude/worktrees/)
+/.claude/worktrees
