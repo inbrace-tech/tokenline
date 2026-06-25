@@ -1,0 +1,60 @@
+{
+  "name": "@inbrace-tech/tokenline",
+  "version": "0.1.0",
+  "description": "A cache-aware statusline for AI coding CLIs — installs tokenline.sh and wires it into your Claude Code settings.",
+  "bin": {
+    "tokenline": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "tokenline.sh"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "packageManager": "pnpm@11.5.3",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "eslint . --cache --cache-location node_modules/.cache/.eslintcache --fix",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\"",
+    "prepack": "pnpm build"
+  },
+  "keywords": [
+    "claude-code",
+    "antigravity",
+    "statusline",
+    "tokens",
+    "prompt-cache",
+    "cli"
+  ],
+  "author": "Inbrace (https://inbrace.com.br)",
+  "contributors": [
+    "Rodrigo Pinheiro Dias (https://github.com/ropdias)"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/inbrace-tech/tokenline#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/inbrace-tech/tokenline.git"
+  },
+  "bugs": {
+    "url": "https://github.com/inbrace-tech/tokenline/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/node": "24.13.2",
+    "eslint": "10.5.0",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-prettier": "5.5.6",
+    "eslint-plugin-simple-import-sort": "13.0.0",
+    "globals": "17.6.0",
+    "prettier": "3.8.4",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.61.0"
+  }
+}
