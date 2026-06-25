@@ -1,6 +1,6 @@
 {
   "name": "@inbrace-tech/tokenline",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "A cache-aware statusline for AI coding CLIs — installs tokenline.sh and wires it into your Claude Code settings.",
   "bin": {
     "tokenline": "dist/cli.js"
@@ -14,7 +14,7 @@
   },
   "packageManager": "pnpm@11.5.3",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsup",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint": "eslint . --cache --cache-location node_modules/.cache/.eslintcache --fix",
     "format": "prettier --write \"src/**/*.ts\"",
@@ -54,6 +54,7 @@
     "eslint-plugin-simple-import-sort": "13.0.0",
     "globals": "17.6.0",
     "prettier": "3.8.4",
+    "tsup": "^8.5.1",
     "typescript": "5.9.3",
     "typescript-eslint": "8.61.0"
   }
