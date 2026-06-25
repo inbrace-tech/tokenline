@@ -21,6 +21,9 @@ updates:
     commit-message:
       prefix: chore
       include: scope
+    labels:
+      - "area:tooling"
+      - "effort:XS"
 
   - package-ecosystem: npm
     directory: /
@@ -37,3 +40,6 @@ updates:
     commit-message:
       prefix: chore
       include: scope
+    labels:
+      - "area:tooling"
+      - "effort:XS"
