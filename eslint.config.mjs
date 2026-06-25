@@ -18,10 +18,10 @@ export default defineConfig(
     languageOptions: {
       globals: { ...globals.node },
       parserOptions: {
-        // `defaultProject` gives `eslint.config.mjs` itself real Node types so
-        // type-aware rules can check it (see tsconfig.eslint.json).
+        // `defaultProject` gives repository config files real Node types so
+        // type-aware rules can check them (see tsconfig.eslint.json).
         projectService: {
-          allowDefaultProject: ['eslint.config.mjs'],
+          allowDefaultProject: ['eslint.config.mjs', 'tsup.config.ts'],
           defaultProject: './tsconfig.eslint.json',
         },
         tsconfigRootDir: import.meta.dirname,
