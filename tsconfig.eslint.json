@@ -1,0 +1,19 @@
+{
+  // Dedicated TS config for ESLint's type-aware linting of repo-root config
+  // files (currently only `eslint.config.mjs`).
+  //
+  // Why it exists: `eslint.config.mjs` is not part of `tsconfig.json` (it isn't
+  // compiled). Referenced from `eslint.config.mjs` as the
+  // `projectService.defaultProject`, it gives the config file real `@types/node`
+  // so `import.meta.dirname` resolves to a string (not `any`) and type-aware
+  // rules can check it. Not used by the build — `tsconfig.json` owns that.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "allowJs": true,
+    "checkJs": false,
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "include": ["eslint.config.mjs"]
+}
