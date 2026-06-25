@@ -1,0 +1,45 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# PR title (semantic) — validates the PR title against conventional-commits.
+# Only the title is checked; after squash-merge it becomes the commit shown in
+# `git log --oneline`, so keeping it formatted keeps history readable.
+#
+# GITHUB_TOKEN is the ephemeral token GitHub injects per run (you don't create
+# or manage it). The action uses it to read the PR title via the API and to
+# post a comment explaining a rejected title. Scope is read-only.
+# ─────────────────────────────────────────────────────────────────────────────
+name: PR title (semantic)
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  semantic:
+    name: Conventional PR title
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: amannn/action-semantic-pull-request@48f256284bd46cdaab1048c3721360e808335d50 # v6.1.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            chore
+            docs
+            refactor
+            test
+            ci
+            perf
+          requireScope: false
+          # Subject must start with a lowercase letter.
+          subjectPattern: ^(?![A-Z]).+$
+          subjectPatternError: |
+            The subject "{subject}" must start with a lowercase letter.
+            Example: "fix: preserve ESC byte in concatenated style sequences"
