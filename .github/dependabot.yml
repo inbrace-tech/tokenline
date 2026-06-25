@@ -1,0 +1,23 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Dependabot — keeps the pinned GitHub Actions SHAs fresh. There is no package
+# manifest in this repo (it's a single bash script), so only the
+# `github-actions` ecosystem is tracked. All actions are grouped into one
+# weekly PR with a `chore` prefix so it passes the pr-title.yml check.
+# ─────────────────────────────────────────────────────────────────────────────
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: America/Sao_Paulo
+    open-pull-requests-limit: 5
+    groups:
+      all-actions:
+        patterns:
+          - "*"
+    commit-message:
+      prefix: chore
+      include: scope
