@@ -17,12 +17,7 @@ the cost equivalents accordingly.
 
 ## Preview
 
-```text
-Opus 4.8 | ctx: 120.4k/1.0M (12%) | [5m] cache: 4:32 HOT
-read(0.1x): 98.2k write(1.25x): 12.0k new(1x): 1.1k output(5x): 2.3k eq: 24.8k saving: 78%
-──────────────────────────────
-5h: ████░░░░░░ 42% (3h10m to reset)  7d: ██░░░░░░░░ 21% (5d04h to reset)
-```
+![Tokenline Preview](https://raw.githubusercontent.com/inbrace-tech/tokenline/main/assets/tokenline.png)
 
 - **Line 1** — model · context used (tokens + %) · cache TTL with a live HOT→COLD countdown.
 - **Line 2** — per-turn token economics: `read / write / new / output`, the equivalent
