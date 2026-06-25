@@ -1,0 +1,36 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# CI — lints the shell scripts on every PR + push to main with ShellCheck.
+# The repo is a single drop-in bash script, so ShellCheck is the whole quality
+# gate.
+# ─────────────────────────────────────────────────────────────────────────────
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# Abort stale PR runs when a new commit lands on the same branch; never cancel
+# push-to-main runs (each merge commit keeps its own run in history).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# Least privilege: the workflow only reads the repo.
+permissions:
+  contents: read
+
+jobs:
+  shellcheck:
+    name: ShellCheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      # scandir "." finds every *.sh in the repo (tokenline.sh, install.sh).
+      - uses: ludeeus/action-shellcheck@00cae500b08a931fb5698e11e79bfbd38e612a38 # v2.0.0
+        env:
+          SHELLCHECK_OPTS: -s bash
+        with:
+          scandir: "."
