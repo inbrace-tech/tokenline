@@ -39,7 +39,7 @@ function parseArgs(argv: string[]): Options {
     purge: false,
     help: false,
     version: false,
-    unknown: null,
+    unknown: [],
   }
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
@@ -69,7 +69,7 @@ function parseArgs(argv: string[]): Options {
         out.version = true
         break
       default:
-        if (a !== undefined && a.startsWith('-')) out.unknown = a
+        if (a !== undefined && a.startsWith('-')) out.unknown.push(a)
         else if (a !== undefined) out._.push(a)
     }
   }
@@ -105,7 +105,9 @@ ${bold('Notes')}
 
 function main(): void {
   const opts = parseArgs(process.argv.slice(2))
-  if (opts.unknown) warn(`ignoring unknown option: ${opts.unknown}`)
+  if (opts.unknown.length > 0) {
+    opts.unknown.forEach((u) => warn(`ignoring unknown option: ${u}`))
+  }
   if (opts.version) {
     console.log(PKG.version)
     return
