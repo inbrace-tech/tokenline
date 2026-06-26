@@ -6,8 +6,8 @@
 // your Claude Code settings.json. The statusline itself runs as
 // `bash tokenline.sh` — there is NO Node in the per-second hot path.
 //
-//   npx @inbrace-tech/tokenline init              # install into ~/.claude
-//   npx @inbrace-tech/tokenline init --project    # install into ./.claude
+//   npx @inbrace-tech/tokenline init              # install into ~/.claude (project)
+//   npx @inbrace-tech/tokenline init --global     # install into ./.claude (global)
 //   npx @inbrace-tech/tokenline doctor            # check deps, change nothing
 //   npx @inbrace-tech/tokenline uninstall         # remove the statusLine block
 //
@@ -33,7 +33,7 @@ function parseArgs(argv: string[]): Options {
   const out: Options = {
     _: [],
     dir: null,
-    project: false,
+    global: false,
     dryRun: false,
     force: false,
     purge: false,
@@ -47,9 +47,8 @@ function parseArgs(argv: string[]): Options {
       case '--dir':
         out.dir = argv[++i] ?? null
         break
-      case '--project':
-      case '--local':
-        out.project = true
+      case '--global':
+        out.global = true
         break
       case '--dry-run':
         out.dryRun = true
@@ -89,7 +88,7 @@ ${bold('Commands')}
   uninstall     Remove the tokenline statusLine block from settings
 
 ${bold('Options')}
-  --project     Target ./.claude (project) instead of ~/.claude (global)
+  --global      Target ~/.claude (global) instead of ./.claude (project)
   --dir <path>  Write tokenline.sh to a custom directory
   --dry-run     Show what would happen without writing anything
   --force       Proceed on an unsupported platform / replace an existing statusLine
