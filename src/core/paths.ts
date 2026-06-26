@@ -8,7 +8,7 @@ import type { Target } from '../shared/types'
 export const SCRIPT_SOURCE = join(__dirname, '..', 'tokenline.sh')
 
 export const claudeDir = (o: Target): string =>
-  o.project ? resolve('.claude') : join(homedir(), '.claude')
+  o.global ? join(homedir(), '.claude') : resolve('.claude')
 export const scriptTarget = (o: Target): string =>
   o.dir ? resolve(o.dir, 'tokenline.sh') : join(claudeDir(o), 'tokenline.sh')
 export const settingsTarget = (o: Target): string =>

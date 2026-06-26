@@ -8,13 +8,16 @@ export function cmdDoctor(): void {
   checkPlatform()
   checkBash()
   checkJq()
-  const scopes: Array<{ label: string; project: boolean }> = [
-    { label: 'global', project: false },
-    { label: 'project', project: true },
+
+  const scopes: Array<{ label: string; global: boolean }> = [
+    { label: 'project', global: false },
+    { label: 'global', global: true },
   ]
+
   for (const scope of scopes) {
-    const f = settingsTarget({ project: scope.project, dir: null })
+    const f = settingsTarget({ global: scope.global, dir: null })
     const s = readSettings(f)
+
     if (s.exists && s.data && isTokenlineCommand(s.data.statusLine?.command)) {
       ok(`${scope.label} settings: tokenline configured (${f})`)
     } else if (s.exists && s.data === null) {

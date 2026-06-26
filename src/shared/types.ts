@@ -1,7 +1,7 @@
 export interface Options {
   _: string[]
   dir: string | null
-  project: boolean
+  global: boolean
   dryRun: boolean
   force: boolean
   purge: boolean
@@ -27,4 +27,4 @@ export interface ReadResult {
   raw?: string
 }
 
-export type Target = Pick<Options, 'project' | 'dir'>
+export type Target = Pick<Options, 'global' | 'dir'>
