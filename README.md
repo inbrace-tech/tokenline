@@ -1,6 +1,6 @@
 # tokenline
 
-> A cache-aware statusline for AI coding CLIs — your context, prompt-cache, and token economics at a glance.
+> See your AI coding costs in real time. Tokenline adds context usage, prompt-cache savings, TTL countdown and rate-limit pacing to Claude Code and Gemini CLI.
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
 ![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20WSL2-blue)
