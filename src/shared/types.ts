@@ -7,7 +7,7 @@ export interface Options {
   purge: boolean
   help: boolean
   version: boolean
-  unknown: string | null
+  unknown: string[]
 }
 
 export interface StatusLineBlock {
