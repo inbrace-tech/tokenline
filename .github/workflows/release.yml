@@ -1,0 +1,38 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Release — triggered on pushes to main.
+# Reads pending .changeset/*.md files, bumps versions, generates CHANGELOG.md,
+# creates a "Version Packages" PR, and publishes to NPM when merged.
+# ─────────────────────────────────────────────────────────────────────────────
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release:
+    name: Version and Publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      # Setup node + pnpm + install (versions read from package.json)
+      - uses: ./.github/actions/setup-node-pnpm
+
+      - name: Create Release Pull Request or Publish
+        id: changesets
+        uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0
+        with:
+          # This triggers the "release" script we added to package.json
+          publish: pnpm run release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

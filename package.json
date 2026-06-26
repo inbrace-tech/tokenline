@@ -19,7 +19,9 @@
     "lint": "eslint . --cache --cache-location node_modules/.cache/.eslintcache --fix",
     "format": "prettier --write \"src/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\"",
-    "prepack": "pnpm build"
+    "prepack": "pnpm build",
+    "changeset": "changeset",
+    "release": "pnpm build && changeset publish"
   },
   "keywords": [
     "claude-code",
@@ -46,6 +48,7 @@
     "access": "public"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.31.0",
     "@eslint/js": "10.0.1",
     "@types/node": "24.13.2",
     "eslint": "10.5.0",
