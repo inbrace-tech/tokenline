@@ -1,6 +1,6 @@
 {
   "name": "@inbrace-tech/tokenline",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A cache-aware statusline for AI coding CLIs — installs tokenline.sh and wires it into your Claude Code settings.",
   "bin": {
     "tokenline": "dist/cli.js"
