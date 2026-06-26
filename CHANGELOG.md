@@ -1,5 +1,11 @@
 # @inbrace-tech/tokenline
 
+## 1.1.2
+
+### Patch Changes
+
+- 6e77d23: docs: update README to clarify tokenline features and real-time cost tracking
+
 ## 1.1.1
 
 ### Patch Changes
