@@ -1,5 +1,11 @@
 # @inbrace-tech/tokenline
 
+## 1.1.1
+
+### Patch Changes
+
+- 9351972: fix(docs): update installer README text to reflect local-first default and --global flag
+
 ## 1.1.0
 
 ### Minor Changes
