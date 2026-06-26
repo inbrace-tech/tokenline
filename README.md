@@ -115,7 +115,7 @@ Then restart Claude Code.
 
 `npx @inbrace-tech/tokenline init` is deliberately transparent about touching your config:
 
-- **Writes** `tokenline.sh` to `~/.claude/` (or `./.claude/` with `--project`).
+- **Writes** `tokenline.sh` to `./.claude/` (or `~/.claude/` with `--global`).
 - **Merges** only the `statusLine` key into `settings.json` — every other setting is preserved.
 - **Backs up** `settings.json` to `settings.json.bak` before writing.
 - **Never clobbers** invalid JSON: if it can't parse your `settings.json`, it stops and prints the block to paste manually.
