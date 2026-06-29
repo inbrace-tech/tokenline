@@ -1,22 +1,11 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# tokenline installer
+# tokenline installer — copies tokenline.sh into the chosen Claude profile(s)
+# and safely patches each settings.json (backup, merge-only, idempotent, never
+# clobbers invalid JSON), mirroring the npm CLI in pure bash + jq.
 #
-# Copies tokenline.sh into one or more Claude profile directories and safely
-# patches each settings.json (backup, merge-only statusLine, idempotent, never
-# clobbers invalid JSON). Mirrors the npm CLI in pure bash + jq, so non-Node
-# users get the same guarantees.
-#
-# Runs on stock macOS bash 3.2 (no bash-4 features here). Animations show only
-# on a TTY; piped/non-interactive runs stay plain and never prompt.
-#
-# Usage:
-#   ./install.sh                 # interactive — pick one or more profiles
-#   ./install.sh --yes           # non-interactive — install to ~/.claude
-#   ./install.sh --dir <path>    # install to a specific directory
-#   ./install.sh --dry-run       # show what would happen, write nothing
-#   ./install.sh --print         # only print the settings snippet
-#   ./install.sh --force         # replace a different existing statusLine
+# Runs on stock macOS bash 3.2. Animations only on a TTY; piped runs stay plain.
+# See usage() / --help for flags.
 # ==============================================================================
 set -euo pipefail
 
@@ -29,14 +18,31 @@ OPT_YES=0
 OPT_DRYRUN=0
 OPT_PRINT=0
 OPT_FORCE=0
+OPT_THEME=""
 
 usage() {
-  sed -n '3,21p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+  cat <<'EOF'
+tokenline installer
+
+Copies tokenline.sh into one or more Claude profile directories and patches
+each settings.json (backup, merge-only statusLine, idempotent, never clobbers
+invalid JSON). Pick a theme and the profile(s) interactively.
+
+Usage:
+  ./install.sh                 # interactive — pick a theme, then profile(s)
+  ./install.sh --theme <name>  # full | minimal | compact | economics | limits
+  ./install.sh --yes           # non-interactive — full theme into ~/.claude
+  ./install.sh --dir <path>    # install into a specific directory
+  ./install.sh --dry-run       # show what would happen, write nothing
+  ./install.sh --print         # only print the settings snippet
+  ./install.sh --force         # replace a different existing statusLine
+EOF
 }
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --dir) OPT_DIR="${2:-}"; shift 2 ;;
+    --theme) OPT_THEME="${2:-}"; shift 2 ;;
     -y|--yes) OPT_YES=1; shift ;;
     --dry-run) OPT_DRYRUN=1; shift ;;
     --print) OPT_PRINT=1; shift ;;
@@ -45,6 +51,27 @@ while [ $# -gt 0 ]; do
     *) printf 'unknown option: %s (try --help)\n' "$1" >&2; exit 2 ;;
   esac
 done
+
+# Theme catalog (must match tokenline.sh --theme names; full = default).
+THEME_NAMES=(full minimal compact economics limits)
+THEME_DESCS=(
+  "everything — model · ctx · cache + economics + limits"
+  "model · ctx% · cache state"
+  "model · ctx · cache · saving%"
+  "model · ctx · cache + per-turn economics"
+  "model · ctx · cache + 5h/7d limit bars"
+)
+# Tallest preview (full); the preview area is padded to this so the menu block
+# keeps a constant height for the fixed cursor-up redraw.
+PREVIEW_H=4
+
+# Unknown --theme falls back to full.
+if [ -n "$OPT_THEME" ]; then
+  case "$OPT_THEME" in
+    full|minimal|compact|economics|limits) ;;
+    *) printf 'unknown theme: %s (using full)\n' "$OPT_THEME" >&2; OPT_THEME="full" ;;
+  esac
+fi
 
 # --- Presentation ------------------------------------------------------------
 # Colors and animation only when stdout is a TTY and NO_COLOR is unset.
@@ -74,9 +101,8 @@ warn_line() { printf ' %s!%s %s\n' "$C_WARN" "$C_RESET" "$1"; nap; }
 err_line()  { printf ' %s✗%s %s\n' "$C_ERR" "$C_RESET" "$1" >&2; nap; }
 note_line() { printf ' %s→ %s%s\n' "$C_DIM" "$1" "$C_RESET"; nap; }
 
-# Decorative braille spinner held for ~$1 seconds while $2 is the label. The work
-# runs synchronously right after, so this only paces the reveal — never fakes a
-# result. No-ops off a TTY.
+# Decorative braille spinner (~$1s, label $2) that paces the reveal; real work
+# runs right after. No-ops off a TTY.
 spin_for() {
   local secs="$1" label="$2"
   [ "$ANIM" -eq 1 ] || return 0
@@ -104,10 +130,16 @@ expand_path() {
 
 statusline_command() {
   # Quote only when the path has a space, to match the npm CLI byte-for-byte.
+  local base
   case "$1" in
-    *" "*) printf 'bash "%s"' "$1" ;;
-    *) printf 'bash %s' "$1" ;;
+    *" "*) base="bash \"$1\"" ;;
+    *) base="bash $1" ;;
   esac
+  # Omit the flag for full (the default) so the command stays identical.
+  if [ -n "$OPT_THEME" ] && [ "$OPT_THEME" != "full" ]; then
+    base="$base --theme $OPT_THEME"
+  fi
+  printf '%s' "$base"
 }
 
 # --- Dependency check --------------------------------------------------------
@@ -116,9 +148,8 @@ check_deps() {
   local missing=0
   spin_for 0.5 "checking dependencies"
 
-  # Check the `bash` on PATH — that's what runs `bash tokenline.sh`, not the
-  # interpreter running this installer (stock macOS launches it as 3.2). Ask
-  # that bash for its own version so a localized `--version` can't break it.
+  # Check the PATH `bash` (what runs the statusline), not this interpreter
+  # (3.2 on stock macOS). Ask it directly so a localized `--version` can't break.
   local bash_ver bash_major
   bash_ver=$(bash -c 'printf "%s.%s" "${BASH_VERSINFO[0]}" "${BASH_VERSINFO[1]}"' 2>/dev/null)
   bash_major=${bash_ver%%.*}
@@ -213,9 +244,7 @@ draw_menu() {
   printf '   %s  %scustom path…%s\033[K\n' "$cur" "$C_DIM" "$C_RESET"
 }
 
-# Arrow-key multi-select. ↑/↓ move, space toggles, digits 1-9 jump+toggle,
-# Enter confirms, q/Esc cancels. Pure bash + ANSI; no stty, so it works the same
-# on macOS bash 3.2 and Linux. Fills TARGETS.
+# Arrow-key multi-select (pure bash + ANSI, no stty). Fills TARGETS.
 select_arrows() {
   local total key k2 i
   CURSOR=0; SEL=()
@@ -314,6 +343,101 @@ select_typed() {
       [ "${#TARGETS[@]}" -gt 0 ] || TARGETS=( "${CAND_PATHS[0]}" )
       ;;
   esac
+}
+
+# --- Theme selection ---------------------------------------------------------
+THEME_CURSOR=0
+
+# Colored mock of each theme, matching the live statusline layout/palette, so
+# the preview shows what gets installed. One statusline line per printf line.
+theme_preview() {
+  local g=$'\033[38;5;244m' r=$'\033[0m' gb=$'\033[01;32m' cy=$'\033[38;5;51m'
+  local ye=$'\033[38;5;226m' mg=$'\033[38;5;201m' og=$'\033[38;5;208m'
+  local gr=$'\033[38;5;46m' dg=$'\033[38;5;240m' dot
+  dot="${g} · ${r}"
+  local l1="Opus 4.8 ${g}| ctx: ${r}${gb}46.2k/200.0k (42%)${r} ${g}| [5m] cache: ${gr}4:05 HOT${r}"
+  local econ="${g}read(0.1x): ${cy}40.0k${r} ${g}write(1.25x): ${ye}5.0k${r} ${g}new(1x): ${mg}1.2k${r} ${g}output(5x): ${gr}800${r} ${g}eq: ${og}15.4k${r} ${g}saving: ${gr}69%${r}"
+  local sep="${dg}──────────────────────────────${r}"
+  local rl="${g}5h: ${r}${gr}███${dg}░░░░░░░${r} ${gr}30%${r}  ${g}7d: ${r}${gr}█${dg}░░░░░░░░░${r} ${gr}12%${r}"
+  case "$1" in
+    full)      printf '%s\n%s\n%s\n%s\n' "$l1" "$econ" "$sep" "$rl" ;;
+    economics) printf '%s\n%s\n' "$l1" "$econ" ;;
+    limits)    printf '%s\n%s\n%s\n' "$l1" "$sep" "$rl" ;;
+    minimal)   printf 'Opus 4.8%s%sctx %s%s42%%%s%s%scache %sHOT%s\n' \
+                 "$dot" "$g" "$r" "$gb" "$r" "$dot" "$g" "$gr" "$r" ;;
+    compact)   printf 'Opus 4.8%s%sctx %s%s46.2k/200.0k 42%%%s%s%scache 4:05 %sHOT%s%s%ssave %s69%%%s\n' \
+                 "$dot" "$g" "$r" "$gb" "$r" "$dot" "$g" "$gr" "$r" "$dot" "$g" "$gr" "$r" ;;
+  esac
+}
+
+# Clip to $2 *visible* columns, copying ANSI escapes through without counting
+# them (so a colored preview line never wraps and desyncs the redraw count).
+clip_visible() {
+  local s="$1" max="$2" out="" vis=0 i=0 n=${#1} ch
+  while [ "$i" -lt "$n" ]; do
+    ch="${s:i:1}"
+    if [ "$ch" = $'\033' ]; then
+      while [ "$i" -lt "$n" ]; do
+        ch="${s:i:1}"; out="$out$ch"; i=$((i + 1))
+        [ "$ch" = "m" ] && break
+      done
+      continue
+    fi
+    [ "$vis" -ge "$max" ] && break
+    out="$out$ch"; vis=$((vis + 1)); i=$((i + 1))
+  done
+  printf '%s\033[0m' "$out"
+}
+
+draw_theme() {
+  local i cur_m line n=0
+  for i in "${!THEME_NAMES[@]}"; do
+    cur_m="  "; [ "$i" -eq "$THEME_CURSOR" ] && cur_m="${C_ACCENT}❯${C_RESET} "
+    printf '   %s%s%-10s%s %s%s%s\033[K\n' \
+      "$cur_m" "$C_BOLD" "${THEME_NAMES[$i]}" "$C_RESET" "$C_DIM" "${THEME_DESCS[$i]}" "$C_RESET"
+  done
+  printf '\033[K\n'
+  printf '   %spreview%s\033[K\n' "$C_DIM" "$C_RESET"
+  while IFS= read -r line; do
+    printf '     %s\033[K\n' "$(clip_visible "$line" "$((COLS - 6))")"; n=$((n + 1))
+  done < <(theme_preview "${THEME_NAMES[$THEME_CURSOR]}")
+  while [ "$n" -lt "$PREVIEW_H" ]; do printf '\033[K\n'; n=$((n + 1)); done
+}
+
+# Single-select arrow menu for the theme. Fills OPT_THEME.
+choose_theme() {
+  # Explicit flag, non-interactive, or dumb terminal: keep current (default full).
+  if [ -n "$OPT_THEME" ]; then return 0; fi
+  if ! { [ -t 0 ] && [ -t 1 ]; } || [ "${TERM:-dumb}" = "dumb" ]; then
+    OPT_THEME="full"; return 0
+  fi
+
+  local total=${#THEME_NAMES[@]} key k2 i
+  THEME_CURSOR=0
+  COLS=$(tput cols 2>/dev/null || printf 80)
+  printf ' %sChoose a theme%s %s(↑/↓ move · enter select)%s\n\n' \
+    "$C_BOLD" "$C_RESET" "$C_DIM" "$C_RESET"
+  # Fixed block height (preview padded to PREVIEW_H) for a cursor-up redraw —
+  # CUU is portable, SCO save/restore isn't.
+  local block=$((total + 2 + PREVIEW_H))
+  printf '\033[?25l'
+  draw_theme
+  while :; do
+    IFS= read -rsn1 key || key=""
+    if [ "$key" = $'\033' ]; then IFS= read -rsn2 -t 1 k2 2>/dev/null || k2=""; key="$key$k2"; fi
+    case "$key" in
+      $'\033[A'|$'\033OA') THEME_CURSOR=$(((THEME_CURSOR - 1 + total) % total)) ;;
+      $'\033[B'|$'\033OB') THEME_CURSOR=$(((THEME_CURSOR + 1) % total)) ;;
+      [1-9]) i=$((key - 1)); [ "$i" -lt "$total" ] && THEME_CURSOR=$i ;;
+      ""|$'\n'|$'\r') break ;;
+      q|Q|$'\033') OPT_THEME="full"; printf '\033[?25h\n'; return 0 ;;
+      *) : ;;
+    esac
+    printf '\033[%dA' "$block"
+    draw_theme
+  done
+  printf '\033[?25h\n'
+  OPT_THEME="${THEME_NAMES[$THEME_CURSOR]}"
 }
 
 # Fills the global TARGETS array with the directories to install into.
@@ -429,6 +553,8 @@ if ! check_deps; then
 fi
 printf '\n'
 
+choose_theme
+printf '\n'
 choose_targets
 
 for t in "${TARGETS[@]}"; do

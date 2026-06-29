@@ -110,11 +110,13 @@ cd tokenline
 ./install.sh
 ```
 
-It discovers your Claude profile directories (`~/.claude`, any `~/.claude-*`,
-and `./.claude`) and lets you install into one or several at once — handy if you
-run multiple profiles. `~/.claude` is the default.
+It first asks you to pick a [theme](#themes), then discovers your Claude profile
+directories (`~/.claude`, any `~/.claude-*`, and `./.claude`) and lets you
+install into one or several at once — handy if you run multiple profiles. Use
+↑/↓ and space to choose; `~/.claude` is the default.
 
 ```bash
+./install.sh --theme minimal        # skip the theme prompt
 ./install.sh --dir ~/.claude-work   # install into a specific directory
 ./install.sh --yes                  # non-interactive, install into ~/.claude
 ./install.sh --dry-run              # show what would happen, write nothing
@@ -123,6 +125,22 @@ run multiple profiles. `~/.claude` is the default.
 ```
 
 Then restart Claude Code.
+
+### Themes
+
+The statusline ships five layouts, selected with `--theme <name>` in the
+`statusLine` command (or the `TOKENLINE_THEME` env var). `full` is the default
+and needs no flag.
+
+| Theme | Lines | Shows |
+| --- | --- | --- |
+| `full` | 3 | model · ctx · cache + per-turn economics + 5h/7d limit bars |
+| `minimal` | 1 | model · ctx% · cache state |
+| `compact` | 1 | model · ctx (tokens + %) · cache TTL · saving% |
+| `economics` | 2 | `full`'s first line + the per-turn economics breakdown |
+| `limits` | 2 | `full`'s first line + the 5h/7d rate-limit bars |
+
+An unknown theme name falls back to `full`, so a typo never blanks the line.
 
 ### What the installer does
 

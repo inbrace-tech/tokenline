@@ -13,3 +13,10 @@ typed-number fallback for `TERM=dumb`. Adds `--dir`, `--yes`, `--dry-run`,
 piped/non-interactive runs stay plain and default to `~/.claude`. Runs on stock
 macOS bash 3.2 and checks the PATH `bash` (not the interpreter) for the 4+
 requirement.
+
+Adds themes to `tokenline.sh` via `--theme <name>` (or `TOKENLINE_THEME`):
+`full` (default, unchanged), `minimal` (model · ctx% · cache), `compact`
+(one line with tokens + saving%), `economics` (model/ctx/cache + per-turn
+breakdown), and `limits` (model/ctx/cache + 5h/7d bars). The installer asks you
+to pick a theme before the profile; an unknown value falls back to `full` so a
+typo never blanks the statusline.
