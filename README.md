@@ -99,7 +99,10 @@ On macOS: `brew install bash jq`. BSD `date`/`stat` work as-is; no `coreutils` n
 
 ### Without Node (clone + install.sh)
 
-No Node? Clone the repo and run the dependency checker, which prints a ready-to-paste snippet:
+No Node? Clone the repo and run the installer. It checks dependencies, then
+copies `tokenline.sh` into the profile(s) you pick and patches each
+`settings.json` with the same safety contract as the npm CLI (backup,
+merge-only, idempotent, never clobbers invalid JSON):
 
 ```bash
 git clone https://github.com/inbrace-tech/tokenline.git
@@ -107,14 +110,16 @@ cd tokenline
 ./install.sh
 ```
 
-Add the printed block to your project's `.claude/settings.json` (or `~/.claude/settings.json` for global), inside the top-level object:
+It discovers your Claude profile directories (`~/.claude`, any `~/.claude-*`,
+and `./.claude`) and lets you install into one or several at once — handy if you
+run multiple profiles. `~/.claude` is the default.
 
-```json
-"statusLine": {
-  "type": "command",
-  "command": "bash /absolute/path/to/tokenline/tokenline.sh",
-  "refreshInterval": 1
-}
+```bash
+./install.sh --dir ~/.claude-work   # install into a specific directory
+./install.sh --yes                  # non-interactive, install into ~/.claude
+./install.sh --dry-run              # show what would happen, write nothing
+./install.sh --print                # just print the snippet to paste manually
+./install.sh --force                # replace a different existing statusLine
 ```
 
 Then restart Claude Code.
