@@ -43,8 +43,9 @@ Strip ANSI to check structure: pipe the output through `sed 's/\x1b\[[0-9;]*m//g
 
 ## Platform
 
-v1 targets Linux / WSL2. macOS and Windows are tracked as roadmap issues — the
-GNU-specific calls (`mapfile`, `date -d`, `stat -c`) are the things to abstract.
+Runs on Linux / WSL2 and macOS. `date`/`stat` are abstracted over GNU vs BSD by
+probing behavior once (`epoch_from_iso`, `file_mtime` in `tokenline.sh`); `mapfile`
+still needs bash 4+, so macOS users `brew install bash`. Windows is a roadmap issue.
 
 ## The npm installer
 

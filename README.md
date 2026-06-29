@@ -3,7 +3,7 @@
 > See your AI coding costs in real time. Tokenline adds context usage, prompt-cache savings, TTL countdown and rate-limit pacing to Claude Code and Gemini CLI.
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
-![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20WSL2-blue)
+![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20WSL2%20%7C%20macOS-blue)
 ![Shell](https://img.shields.io/badge/shell-bash%204%2B-lightgrey)
 
 ## Quickstart
@@ -78,20 +78,25 @@ If `tokenline` reveals you are getting 1-hour cache writes, keep in mind they bu
 
 ## Requirements
 
-v1 targets **Linux / WSL2**:
+Runs on **Linux / WSL2** and **macOS**:
 
-- `bash` 4 or newer
+- `bash` 4 or newer — macOS ships 3.2, so `brew install bash`
 - [`jq`](https://jqlang.github.io/jq/)
-- GNU coreutils (`date -d`, `stat -c`)
+- `date` and `stat` — GNU (`-d` / `-c`) or BSD (`-j` / `-f`); both are handled
 
-> macOS and Windows support are on the [roadmap](#roadmap). `install.sh` checks all of
-> the above and tells you exactly what's missing.
+On macOS: `brew install bash jq`. BSD `date`/`stat` work as-is; no `coreutils` needed.
+
+> Windows support is on the [roadmap](#roadmap). `install.sh` checks all of the
+> above and tells you exactly what's missing.
 
 ## Advanced Installation
 
 ### Without Node (clone + install.sh)
 
-No Node? Clone the repo and run the dependency checker, which prints a ready-to-paste snippet:
+No Node? Clone the repo and run the installer. It checks dependencies, then
+copies `tokenline.sh` into the profile(s) you pick and patches each
+`settings.json` with the same safety contract as the npm CLI (backup,
+merge-only, idempotent, never clobbers invalid JSON):
 
 ```bash
 git clone https://github.com/inbrace-tech/tokenline.git
@@ -99,17 +104,37 @@ cd tokenline
 ./install.sh
 ```
 
-Add the printed block to your project's `.claude/settings.json` (or `~/.claude/settings.json` for global), inside the top-level object:
+It first asks you to pick a [theme](#themes), then discovers your Claude profile
+directories (`~/.claude`, any `~/.claude-*`, and `./.claude`) and lets you
+install into one or several at once — handy if you run multiple profiles. Use
+↑/↓ and space to choose; `~/.claude` is the default.
 
-```json
-"statusLine": {
-  "type": "command",
-  "command": "bash /absolute/path/to/tokenline/tokenline.sh",
-  "refreshInterval": 1
-}
+```bash
+./install.sh --theme minimal        # skip the theme prompt
+./install.sh --dir ~/.claude-work   # install into a specific directory
+./install.sh --yes                  # non-interactive, install into ~/.claude
+./install.sh --dry-run              # show what would happen, write nothing
+./install.sh --print                # just print the snippet to paste manually
+./install.sh --force                # replace a different existing statusLine
 ```
 
 Then restart Claude Code.
+
+### Themes
+
+The statusline ships five layouts, selected with `--theme <name>` in the
+`statusLine` command (or the `TOKENLINE_THEME` env var). `full` is the default
+and needs no flag.
+
+| Theme | Lines | Shows |
+| --- | --- | --- |
+| `full` | 3 | model · ctx · cache + per-turn economics + 5h/7d limit bars |
+| `minimal` | 1 | model · ctx% · cache state |
+| `compact` | 1 | model · ctx (tokens + %) · cache TTL · saving% |
+| `economics` | 2 | `full`'s first line + the per-turn economics breakdown |
+| `limits` | 2 | `full`'s first line + the 5h/7d rate-limit bars |
+
+An unknown theme name falls back to `full`, so a typo never blanks the line.
 
 ### What the installer does
 
@@ -139,11 +164,11 @@ On every refresh the host CLI pipes a JSON snapshot of the session to the script
 | Blank statusline, or `[tokenline] jq not found` | Install `jq` (`apt install jq` / `brew install jq`), then re-run `./install.sh`. |
 | Cache shows `COLD` immediately | Normal right after a long idle gap — the cache window has elapsed. It goes `HOT` again on your next turn. |
 | Colors look wrong / show escape codes | Your terminal must support 256-color ANSI. Most modern terminals do; check your `$TERM`. |
-| Nothing renders on macOS | Expected on v1 — macOS uses BSD `date`/`stat`. See the [roadmap](#roadmap). |
+| Nothing renders on macOS | Install `bash` 4+ and `jq`: `brew install bash jq`. Stock bash 3.2 lacks `mapfile`. |
 
 ## Roadmap
 
-- [ ] macOS support (BSD `date`/`stat`, bash 3.2 fallback)
+- [x] macOS support (BSD `date`/`stat`, Homebrew bash)
 - [ ] Windows support (Git Bash / PowerShell)
 - [ ] Configurable colors and thresholds via `TOKENLINE_*` env vars
 
