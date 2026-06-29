@@ -24,11 +24,11 @@ printf '%s\n' "--------------------------------"
 
 missing=0
 
-# bash 4+ (mapfile/associative features)
+# bash 4+ (mapfile). macOS ships 3.2 — `brew install bash` provides 5.x.
 if [ "${BASH_VERSINFO[0]:-0}" -ge 4 ]; then
   ok "bash ${BASH_VERSION%%(*}"
 else
-  err "bash 4+ required (found ${BASH_VERSION%%(*}). macOS ships 3.2 — see README roadmap."
+  err "bash 4+ required (found ${BASH_VERSION%%(*}). On macOS: brew install bash"
   missing=1
 fi
 
@@ -40,19 +40,23 @@ else
   missing=1
 fi
 
-# GNU date (-d): used to parse ISO timestamps from the transcript
+# date: GNU (-d) or BSD (-j) — tokenline handles both.
 if date -d "@0" >/dev/null 2>&1; then
-  ok "GNU date (-d)"
+  ok "date (GNU -d)"
+elif date -j -f "%s" 0 >/dev/null 2>&1; then
+  ok "date (BSD -j)"
 else
-  err "GNU date (-d) missing — BSD/macOS date differs (see README roadmap)"
+  err "no usable date (need GNU -d or BSD -j)"
   missing=1
 fi
 
-# GNU stat (-c): mtime fallback for the cache timer
+# stat: GNU (-c) or BSD (-f) — tokenline handles both.
 if stat -c %Y . >/dev/null 2>&1; then
-  ok "GNU stat (-c)"
+  ok "stat (GNU -c)"
+elif stat -f %m . >/dev/null 2>&1; then
+  ok "stat (BSD -f)"
 else
-  err "GNU stat (-c) missing — BSD/macOS stat differs (see README roadmap)"
+  err "no usable stat (need GNU -c or BSD -f)"
   missing=1
 fi
 
@@ -67,8 +71,8 @@ fi
 
 printf '\n'
 if [ "$missing" -ne 0 ]; then
-  warn "Missing dependencies above. tokenline targets Linux/WSL2 for v1;"
-  warn "macOS/Windows support is on the roadmap (see README)."
+  warn "Missing dependencies above. On macOS: brew install bash jq."
+  warn "Windows support is on the roadmap (see README)."
   printf '\n'
 fi
 
