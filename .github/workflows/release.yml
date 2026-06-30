@@ -1,7 +1,9 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # Release — triggered on pushes to main.
 # Reads pending .changeset/*.md files, bumps versions, generates CHANGELOG.md,
-# creates a "Version Packages" PR, and publishes to NPM when merged.
+# creates a "chore: version packages" PR, and publishes to NPM when merged.
+# The PR title/commit are set to a conventional-commits form (lowercase subject)
+# so the "PR title (semantic)" check passes on the auto-generated release PR.
 # ─────────────────────────────────────────────────────────────────────────────
 name: Release
 
@@ -33,6 +35,10 @@ jobs:
         with:
           # This triggers the "release" script we added to package.json
           publish: pnpm run release
+          # Conventional-commits title for the auto-generated release PR, so the
+          # "PR title (semantic)" check passes (it requires a lowercase subject).
+          title: "chore: version packages"
+          commit: "chore: version packages"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
