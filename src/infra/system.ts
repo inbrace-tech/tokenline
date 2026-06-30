@@ -5,13 +5,13 @@ import { ok, warn } from '../shared/logger'
 
 export function checkPlatform(): boolean {
   const p = platform()
-  if (p === 'linux') {
+  if (p === 'linux' || p === 'darwin') {
     ok(`platform: ${p} (supported)`)
     return true
   }
   warn(
-    `platform: ${p} — v1 targets Linux/WSL2; the bash statusline likely won't ` +
-      `render yet (see roadmap). Use --force to install anyway.`,
+    `platform: ${p} — supported on Linux/WSL2 and macOS; the bash statusline ` +
+      `likely won't render yet (see roadmap). Use --force to install anyway.`,
   )
   return false
 }

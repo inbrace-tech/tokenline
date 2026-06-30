@@ -9,8 +9,13 @@
 #
 # Repo:     https://github.com/inbrace-tech/tokenline
 # License:  MIT
-# Requires: bash 4+, jq, GNU coreutils (date -d, stat -c). Linux/WSL2 for v1.
+# Requires: bash 4+, jq. Linux/WSL2 or macOS (brew install bash jq).
 # ==============================================================================
+
+# Pin C locale: a comma-decimal locale (e.g. pt_BR) makes awk/printf emit
+# "46,2k" and reject dotted input. LC_ALL beats LC_NUMERIC, so set LC_ALL to
+# stay deterministic even when the user exports LC_ALL. Output is ASCII/bytes.
+export LC_ALL=C
 
 # --- Colors & Formatting Constants ---
 COLOR_GRAY=$'\033[38;5;244m'
@@ -33,6 +38,32 @@ if ! command -v jq >/dev/null 2>&1; then
     "$COLOR_GRAY" "$COLOR_RESET"
   exit 0
 fi
+
+# --- GNU vs BSD coreutils (Linux vs macOS) ---
+# Probe behavior, not `uname`, so Homebrew coreutils is picked up automatically.
+if date -d "@0" >/dev/null 2>&1; then _date_gnu=1; else _date_gnu=0; fi
+if stat -c %Y . >/dev/null 2>&1; then _stat_gnu=1; else _stat_gnu=0; fi
+
+epoch_from_iso() {
+  # ISO-8601 -> epoch seconds; empty on failure (callers fall back to mtime).
+  local iso="$1"
+  if [ "$_date_gnu" -eq 1 ]; then
+    date -d "$iso" +%s 2>/dev/null
+  else
+    # BSD date needs an explicit format and rejects fractional secs / 'Z'.
+    # First 19 chars are always 'YYYY-MM-DDTHH:MM:SS'; transcripts are UTC.
+    date -u -j -f "%Y-%m-%dT%H:%M:%S" "${iso:0:19}" +%s 2>/dev/null
+  fi
+}
+
+file_mtime() {
+  local f="$1"
+  if [ "$_stat_gnu" -eq 1 ]; then
+    stat -c %Y "$f" 2>/dev/null
+  else
+    stat -f %m "$f" 2>/dev/null
+  fi
+}
 
 # --- Runtime state directory ---
 # Per-turn timestamp / TTL are cached between the 1s refreshes. Prefer a
@@ -176,10 +207,10 @@ compute_cache_timer() {
       | tail -n 1
     )
     if [ -n "$iso" ]; then
-      last_ts=$(date -d "$iso" +%s 2>/dev/null)
+      last_ts=$(epoch_from_iso "$iso")
     fi
     # Mtime fallback if parsing is unsuccessful
-    [ -z "$last_ts" ] && last_ts=$(stat -c %Y "$transcript_path" 2>/dev/null)
+    [ -z "$last_ts" ] && last_ts=$(file_mtime "$transcript_path")
   fi
 
   # Fallback to local session caching file if transcript read is unavailable or cached timestamp is newer
