@@ -36,7 +36,11 @@ jobs:
           scandir: "."
 
   cli:
-    name: CLI (lint, typecheck, build)
+    # Kept short + generic on purpose: this exact string is the required status
+    # check "CLI" in the "Protect main branch" ruleset. A generic name lets us
+    # add/remove steps freely without ever renaming the job (renaming would
+    # orphan the required check and leave PRs stuck "waiting for status").
+    name: CLI
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -53,4 +57,5 @@ jobs:
             exit 1
           fi
       - run: pnpm typecheck
+      - run: pnpm test
       - run: pnpm build
