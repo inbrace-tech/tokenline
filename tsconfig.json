@@ -15,7 +15,7 @@
     "declaration": false,
     "sourceMap": false,
     "skipLibCheck": true,
-    "types": ["node"]
+    "types": ["node", "vitest/globals"]
   },
   "include": ["src"]
 }

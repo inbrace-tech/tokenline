@@ -1,5 +1,6 @@
 // @ts-check
 import eslint from '@eslint/js'
+import vitest from '@vitest/eslint-plugin'
 import { defineConfig } from 'eslint/config'
 import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended'
 import simpleImportSort from 'eslint-plugin-simple-import-sort'
@@ -21,7 +22,11 @@ export default defineConfig(
         // `defaultProject` gives repository config files real Node types so
         // type-aware rules can check them (see tsconfig.eslint.json).
         projectService: {
-          allowDefaultProject: ['eslint.config.mjs', 'tsup.config.ts'],
+          allowDefaultProject: [
+            'eslint.config.mjs',
+            'tsup.config.ts',
+            'vitest.config.ts',
+          ],
           defaultProject: './tsconfig.eslint.json',
         },
         tsconfigRootDir: import.meta.dirname,
@@ -35,5 +40,26 @@ export default defineConfig(
       'simple-import-sort/exports': 'error',
       'prettier/prettier': ['error', { endOfLine: 'auto' }],
     },
+  },
+  // Test files: vitest's recommended rules. Specs use bare globals (`it`,
+  // `expect`, …) via `globals: true` in vitest.config.ts, so declare them here.
+  {
+    files: ['**/*.spec.ts'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+        describe: 'readonly',
+        it: 'readonly',
+        test: 'readonly',
+        expect: 'readonly',
+        beforeAll: 'readonly',
+        beforeEach: 'readonly',
+        afterAll: 'readonly',
+        afterEach: 'readonly',
+        vi: 'readonly',
+      },
+    },
+    plugins: { vitest },
+    rules: { ...vitest.configs.recommended.rules },
   },
 )
