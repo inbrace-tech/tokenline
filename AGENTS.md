@@ -52,7 +52,14 @@ still needs bash 4+, so macOS users `brew install bash`. Windows is a roadmap is
 `src/cli.ts` is the installer CLI, authored in TypeScript and built with `tsc`
 to `dist/cli.js` (the published artifact; `dist/` is gitignored). It has **zero
 runtime dependencies** — only Node built-ins. Develop with pnpm: `pnpm lint`,
-`pnpm typecheck`, `pnpm build`. CI runs all three plus ShellCheck.
+`pnpm typecheck`, `pnpm test`, `pnpm build`. CI runs all four plus ShellCheck.
+
+CI and local dev use the Node version pinned in `.nvmrc` (Node 24 LTS) — that's
+the single source of truth for "which Node". `engines.node` in `package.json`
+is the looser *runtime support floor* for the published CLI, not the dev
+version. Dependabot keeps devDependencies fresh but **skips major bumps**:
+taking a major (TypeScript, `@types/node`, …) is a deliberate manual decision,
+never an auto-PR.
 
 The installer is a convenience wrapper: it must never become *required* to use
 the statusline — the bash + `install.sh` path stays first-class so non-Node

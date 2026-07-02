@@ -3,6 +3,10 @@
 # dependencies fresh. Two ecosystems: github-actions (workflows + the composite
 # action) and npm (the pnpm-managed devDependencies for src/cli.ts). Each is
 # grouped into one weekly PR with a `chore` prefix so it passes pr-title.yml.
+#
+# The npm group deliberately skips major bumps (see its `ignore` below): minors
+# and patches flow automatically, but taking a major (TypeScript, @types/node,
+# …) stays a manual, deliberate decision instead of a weekly PR.
 # ─────────────────────────────────────────────────────────────────────────────
 version: 2
 updates:
@@ -37,6 +41,12 @@ updates:
       all-npm:
         patterns:
           - "*"
+    # Major bumps are deliberate maintainer decisions, not weekly noise: skip
+    # them here (e.g. TypeScript 6, @types/node 26) so only minors/patches flow
+    # automatically. Take a major by bumping it by hand when you choose to.
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     commit-message:
       prefix: chore
       include: scope
