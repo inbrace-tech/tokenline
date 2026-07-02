@@ -2,6 +2,7 @@
 import eslint from '@eslint/js'
 import vitest from '@vitest/eslint-plugin'
 import { defineConfig } from 'eslint/config'
+import n from 'eslint-plugin-n'
 import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended'
 import simpleImportSort from 'eslint-plugin-simple-import-sort'
 import globals from 'globals'
@@ -39,6 +40,20 @@ export default defineConfig(
       'simple-import-sort/imports': 'error',
       'simple-import-sort/exports': 'error',
       'prettier/prettier': ['error', { endOfLine: 'auto' }],
+    },
+  },
+  // Node built-in API floor. Flags any `node:` built-in newer than the
+  // engines.node support floor (>=18) in the *shipped* CLI code, so developing
+  // on Node 24 can't silently reach for an API that breaks on an older runtime.
+  // This is the early, author-time guard; the CI Node matrix is the proof.
+  // eslint-plugin-n reads the floor straight from package.json's engines.node.
+  // Scoped to src only — dev/config files (this file, tsup/vitest config) run on
+  // the pinned dev Node, so they may use newer APIs freely.
+  {
+    files: ['src/**/*.ts'],
+    plugins: { n },
+    rules: {
+      'n/no-unsupported-features/node-builtins': 'error',
     },
   },
   // Test files: vitest's recommended rules. Specs use bare globals (`it`,

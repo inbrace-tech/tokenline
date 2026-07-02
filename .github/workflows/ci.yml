@@ -35,12 +35,12 @@ jobs:
         with:
           scandir: "."
 
-  cli:
-    # Kept short + generic on purpose: this exact string is the required status
-    # check "CLI" in the "Protect main branch" ruleset. A generic name lets us
-    # add/remove steps freely without ever renaming the job (renaming would
-    # orphan the required check and leave PRs stuck "waiting for status").
-    name: CLI
+  # Dev quality gate: lint, typecheck, test, build — on the pinned dev Node
+  # (.nvmrc, currently 24). This is dev-time tooling: ESLint 10 and Vitest 4
+  # themselves require Node 20+, so it deliberately does NOT run on the old end
+  # of the support range. It also uploads the built artifact for the compat job.
+  cli-dev:
+    name: CLI (dev gate)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -59,3 +59,73 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
+      # Hand the built CLI to cli-compat so it runs the *exact* published
+      # artifact on every Node, without rebuilding (or installing the dev
+      # toolchain, which doesn't support Node 18).
+      - name: Upload built CLI
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+          retention-days: 1
+
+  # Runtime compat: prove the *shipped* artifact runs across the whole
+  # engines.node range (18, the floor, through 24). The dev toolchain doesn't run
+  # on Node 18, but the CLI does — so we execute the prebuilt dist/cli.js (zero
+  # runtime deps) on each line. This is what *earns* the ">=18" claim instead of
+  # assuming it; the eslint-plugin-n floor rule is the matching author-time guard.
+  # (18 and 20 are past upstream EOL but still widely installed; we keep
+  # supporting them until a real need forces a deliberate floor raise.)
+  cli-compat:
+    name: CLI compat (Node ${{ matrix.node }})
+    needs: cli-dev
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      # Don't cancel the other Node legs when one fails — we want to see whether a
+      # break is version-specific (floor only) or across the board.
+      fail-fast: false
+      matrix:
+        node: [18, 20, 22, 24]
+    steps:
+      # Checkout provides package.json at the repo root; dist/cli.js reads its
+      # version from ../package.json, so the layout must match the published one.
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - name: Download built CLI
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: dist
+          path: dist/
+      # Just Node — no pnpm, no install. Consumers get a prebuilt, zero-dep CLI.
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Smoke-run the built CLI
+        run: |
+          set -euo pipefail
+          echo "Node $(node -v)"
+          version="$(node dist/cli.js --version)"
+          test -n "$version"
+          node dist/cli.js --help > /dev/null
+          echo "ok: tokenline $version runs on $(node -v)"
+
+  # Thin aggregation gate. This exact string "CLI" is the required status check
+  # in the "Protect main branch" ruleset, so it must stay a single fixed name.
+  # It fans in over the dev + compat jobs, letting us change either without ever
+  # renaming (and orphaning) the required check. `if: always()` + the explicit
+  # result check make the gate report a real pass/fail instead of a "skipped"
+  # that branch protection would silently treat as green.
+  cli:
+    name: CLI
+    needs: [cli-dev, cli-compat]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Gate on the CLI jobs
+        run: |
+          if [ "${{ needs.cli-dev.result }}" != "success" ] || [ "${{ needs.cli-compat.result }}" != "success" ]; then
+            echo "::error::CLI dev gate or Node-compat matrix did not pass."
+            exit 1
+          fi
