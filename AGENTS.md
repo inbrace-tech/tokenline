@@ -52,7 +52,26 @@ still needs bash 4+, so macOS users `brew install bash`. Windows is a roadmap is
 `src/cli.ts` is the installer CLI, authored in TypeScript and built with `tsc`
 to `dist/cli.js` (the published artifact; `dist/` is gitignored). It has **zero
 runtime dependencies** — only Node built-ins. Develop with pnpm: `pnpm lint`,
-`pnpm typecheck`, `pnpm build`. CI runs all three plus ShellCheck.
+`pnpm typecheck`, `pnpm test`, `pnpm build`. CI runs all four plus ShellCheck.
+
+Local dev and default CI use the Node version pinned in `.nvmrc` (Node 24 LTS) —
+the single source of truth for "which Node you develop on". `engines.node` in
+`package.json` is a separate promise: the runtime *support floor* for the
+published CLI (`>=18`). We keep that floor deliberately **broad** — the CLI uses
+only long-stable built-ins, so a wide floor costs nothing and lets more people
+run it. The floor is **earned, not assumed**: the dev toolchain (lint, typecheck,
+test) runs on the pinned Node — ESLint 10 and Vitest 4 need Node 20+ — while a
+separate compat matrix builds once and then *executes* the shipped `dist/cli.js`
+(zero runtime deps) on `[18, 20, 22, 24]`. So every published version is proven
+to still run on its minimum, and the required status check `CLI` fans in over
+both. Two guards keep "dev on 24, ship for 18" honest: `eslint-plugin-n`
+(`n/no-unsupported-features/node-builtins`, scoped to `src/`) flags any built-in
+newer than the floor at author time, and `tsup`'s `target: node18` down-levels
+syntax to match. Raising the floor is a deliberate, **breaking** decision — a
+major version bump with a changelog note — taken only when we genuinely need a
+newer built-in API, never by drift. Dependabot keeps devDependencies fresh but
+**skips major bumps**: taking a major (TypeScript, `@types/node`, …) is a
+deliberate manual decision, never an auto-PR.
 
 The installer is a convenience wrapper: it must never become *required* to use
 the statusline — the bash + `install.sh` path stays first-class so non-Node

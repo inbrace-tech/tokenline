@@ -1,5 +1,5 @@
 name: Setup Node + pnpm
-description: Activate pnpm and Node (versions read from package.json), then install with a frozen lockfile.
+description: Activate pnpm (version from package.json) and Node (version from .nvmrc), then install with a frozen lockfile.
 
 runs:
   using: composite
@@ -9,12 +9,13 @@ runs:
     # so CI uses the exact same pnpm version as local dev.
     - uses: pnpm/action-setup@d15e628ca66d93ee5f352c71671a7bc6a97af5c9 # v6.0.8
 
-    # Activate Node. `node-version-file: package.json` reads `engines.node`,
-    # so CI uses the same Node range as local. `cache: pnpm` enables the
-    # built-in pnpm store cache (much faster warm installs).
+    # Activate Node. `node-version-file: .nvmrc` pins the dev/CI Node line, so
+    # CI and contributors run the same version. (`engines.node` in package.json
+    # is the looser runtime *support floor*, not the dev version.) `cache: pnpm`
+    # enables the built-in pnpm store cache (much faster warm installs).
     - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
       with:
-        node-version-file: package.json
+        node-version-file: .nvmrc
         cache: pnpm
 
     # Deterministic install; fails if pnpm-lock.yaml is out of sync with
