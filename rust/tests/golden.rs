@@ -17,8 +17,8 @@ fn strip_ansi(s: &str) -> String {
 
 fn fixtures_dir() -> PathBuf { PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures") }
 
-fn cache_scratch() -> PathBuf {
-    let d = std::env::temp_dir().join(format!("tl-golden-{}", std::process::id()));
+fn cache_scratch(label: &str) -> PathBuf {
+    let d = std::env::temp_dir().join(format!("tl-golden-{}-{}", std::process::id(), label));
     std::fs::create_dir_all(&d).unwrap();
     d
 }
@@ -29,7 +29,7 @@ fn healthy_claude_matches_golden() {
         &std::fs::read_to_string(fixtures_dir().join("healthy_claude.json")).unwrap()).unwrap();
     // FIXED now so the cache countdown is deterministic.
     let now = 1_783_000_000;
-    let out = render(raw, now, &cache_scratch(), Density::Normal);
+    let out = render(raw, now, &cache_scratch("healthy"), Density::Normal);
     let got = strip_ansi(&out);
     let want = std::fs::read_to_string(fixtures_dir().join("healthy_claude.txt")).unwrap();
     assert_eq!(got, want, "\n--- got ---\n{}\n--- want ---\n{}", got, want);
@@ -41,7 +41,7 @@ fn gemini_hides_rate_limits() {
         r#"{"model":{"display_name":"Gemini 2.5 Pro"},
             "context_window":{"used_percentage":9.0,"context_window_size":1000000,
               "current_usage":{"cache_read_input_tokens":100,"output_tokens":50}}}"#).unwrap();
-    let out = strip_ansi(&render(raw, 1_783_000_000, &cache_scratch(), Density::Normal));
+    let out = strip_ansi(&render(raw, 1_783_000_000, &cache_scratch("gemini"), Density::Normal));
     assert!(!out.contains("5h"), "Gemini has no rate limits");
     assert!(!out.contains("7d"));
 }
@@ -51,7 +51,7 @@ fn no_activity_hides_cost_line() {
     let raw: RawInput = serde_json::from_str(
         r#"{"model":{"display_name":"Opus 4.8"},
             "context_window":{"used_percentage":1.0}}"#).unwrap();
-    let out = strip_ansi(&render(raw, 1_783_000_000, &cache_scratch(), Density::Normal));
+    let out = strip_ansi(&render(raw, 1_783_000_000, &cache_scratch("noact"), Density::Normal));
     assert!(!out.contains("cost "), "no turn => no cost line");
 }
 
@@ -64,7 +64,7 @@ fn very_fast_pace_shows_eta_once() {
         r#"{"model":{"display_name":"Opus 4.8"},
             "context_window":{"used_percentage":9.0},
             "rate_limits":{"five_hour":{"used_percentage":88.0,"resets_at":"2026-07-02T16:16:40Z"}}}"#).unwrap();
-    let out = strip_ansi(&render(raw, 1_783_000_000, &cache_scratch(), Density::Normal));
+    let out = strip_ansi(&render(raw, 1_783_000_000, &cache_scratch("pace"), Density::Normal));
     assert!(out.contains("⚡ pace!!"), "expected VeryFast pace flag:\n{}", out);
     assert!(!out.contains("empties"), "ETA must not be duplicated via 'empties':\n{}", out);
     assert_eq!(out.matches("left").count(), 1, "ETA must appear exactly once:\n{}", out);

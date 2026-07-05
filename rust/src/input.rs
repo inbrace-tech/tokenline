@@ -65,7 +65,9 @@ impl Session {
         let tokens_used = u.input_tokens + u.cache_creation_input_tokens + u.cache_read_input_tokens;
 
         // Subagent transcript -> parent session (tokenline.sh:123-125)
-        let mut transcript_path = r.transcript_path;
+        // Normalize Windows backslashes once, up front, so all contains()/replace()
+        // logic below (written for forward slashes) works on both platforms.
+        let mut transcript_path = r.transcript_path.replace('\\', "/");
         if transcript_path.contains("/subagents/") {
             if let Some(parent) = std::path::Path::new(&transcript_path)
                 .parent().and_then(|p| p.parent())
@@ -155,5 +157,17 @@ mod tests {
         assert!(s.is_gemini);
         assert_eq!(s.cli_client, Client::Antigravity);
         assert!(s.transcript_path.contains("/antigravity-cli/"));
+    }
+
+    #[test]
+    fn normalizes_windows_backslash_paths() {
+        // Backslash subagent path resolves to the parent .jsonl, same as the unix case.
+        let raw: RawInput = serde_json::from_str(
+            r#"{"transcript_path":"C:\\Users\\x\\antigravity\\p\\subagents\\s\\t.jsonl"}"#).unwrap();
+        let s = Session::from_raw(raw);
+        assert_eq!(s.cli_client, Client::Antigravity);
+        assert!(s.transcript_path.contains("/antigravity-cli/"));
+        assert!(s.transcript_path.ends_with(".jsonl"));
+        assert!(!s.transcript_path.contains("/subagents/"));
     }
 }
