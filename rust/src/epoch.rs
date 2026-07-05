@@ -26,7 +26,7 @@ pub fn iso8601_to_epoch(iso: &str) -> Option<i64> {
     let min = num(14, 16)?;
     let sec = num(17, 19)?;
     if !(1..=12).contains(&month) || !(1..=31).contains(&day)
-        || hour > 23 || min > 59 || sec > 60 { return None; }
+        || !(0..=23).contains(&hour) || !(0..=59).contains(&min) || !(0..=60).contains(&sec) { return None; }
     let days = days_from_civil(year, month, day);
     Some(days * 86_400 + hour * 3600 + min * 60 + sec)
 }
@@ -56,5 +56,10 @@ mod tests {
     fn epoch_rejects_garbage() {
         assert_eq!(iso8601_to_epoch("not-a-date"), None);
         assert_eq!(iso8601_to_epoch(""), None);
+    }
+    #[test]
+    fn epoch_rejects_negative_time_fields() {
+        assert_eq!(iso8601_to_epoch("1970-01-01T-1:00:00"), None);
+        assert_eq!(iso8601_to_epoch("1970-01-01T00:-5:00"), None);
     }
 }
