@@ -108,9 +108,9 @@ parse_and_prepare_paths() {
   transcript_path="${_f[3]}"
   session_id="${_f[4]}"
   rl_5h_pct="${_f[5]}"
-  rl_5h_reset="${_f[6]}"
+  rl_5h_reset=$(epoch_from_iso "${_f[6]}")
   rl_7d_pct="${_f[7]}"
-  rl_7d_reset="${_f[8]}"
+  rl_7d_reset=$(epoch_from_iso "${_f[8]}")
   cur_input="${_f[9]}"
   cur_output="${_f[10]}"
   cur_cwrite="${_f[11]}"
