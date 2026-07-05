@@ -14,3 +14,6 @@ pub mod ratelimits;
 pub mod cache;
 
 pub mod cachetimer;
+
+pub mod render;
+pub use render::render;
