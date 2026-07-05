@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 description = "A cache-aware statusline for AI coding CLIs"
 license = "MIT"
+repository = "https://github.com/inbrace-tech/tokenline"
 rust-version = "1.85"   # MSRV floor forced by edition 2024 (stabilized in 1.85); proven by CI msrv job
 
 [[bin]]
@@ -23,3 +24,8 @@ opt-level = "z"
 lto = true
 strip = true
 panic = "unwind"   # catch_unwind MUST work; abort would be a non-zero exit
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"
