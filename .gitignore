@@ -23,6 +23,9 @@ node_modules/
 dist/
 *.tgz
 
+# Rust build artifacts (cargo-dist builds into the workspace root here, not rust/target/)
+/target
+
 # personal Claude Code overrides (the committed .claude/settings.json is the example)
 .claude/settings.local.json
 

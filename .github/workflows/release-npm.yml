@@ -5,7 +5,7 @@
 # The PR title/commit are set to a conventional-commits form (lowercase subject)
 # so the "PR title (semantic)" check passes on the auto-generated release PR.
 # ─────────────────────────────────────────────────────────────────────────────
-name: Release
+name: Release (npm)
 
 on:
   push:
