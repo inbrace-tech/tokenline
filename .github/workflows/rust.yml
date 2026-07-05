@@ -1,7 +1,7 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # Rust CI — gates the tokenline binary crate in rust/. Runs on every PR/push.
 # fmt + clippy + test across Linux/macOS/Windows, plus an MSRV build on the
-# declared floor (1.82). The Windows test leg runs the actual binary via stdin
+# declared floor (1.85). The Windows test leg runs the actual binary via stdin
 # (tests/never_crash.rs) — that is the "runs on Windows" done-criteria.
 # ─────────────────────────────────────────────────────────────────────────────
 name: Rust
@@ -33,6 +33,7 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88 # stable
         with:
+          toolchain: stable
           components: rustfmt
       - run: cargo fmt --check
 
@@ -48,6 +49,7 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88 # stable
         with:
+          toolchain: stable
           components: clippy
       - name: Clippy (deny warnings)
         run: cargo clippy --all-targets -- -D warnings
@@ -61,6 +63,8 @@ jobs:
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - uses: dtolnay/rust-toolchain@98effd2fc0b766278e30ab86762dd5e9a8531399 # 1.85.0
+        with:
+          toolchain: "1.85.0"
       - name: Build on the declared MSRV floor
         run: cargo build --bins --lib
 
