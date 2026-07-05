@@ -27,7 +27,10 @@ fn empty_stdin_exits_zero() {
 #[test]
 fn valid_input_renders_and_exits_zero() {
     let (code, out) = run(r#"{"model":{"display_name":"Opus 4.8"},
-        "context_window":{"used_percentage":9.0}}"#);
+        "context_window":{"used_percentage":9.0,
+            "current_usage":{"input_tokens":2,"output_tokens":2000,
+                "cache_creation_input_tokens":2200,"cache_read_input_tokens":86600}}}"#);
     assert_eq!(code, 0);
     assert!(out.contains("Opus 4.8"));
+    assert!(out.contains("cost "), "expected the full PULSE+ render (cost line), got: {}", out);
 }

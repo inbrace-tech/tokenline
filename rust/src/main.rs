@@ -1,4 +1,5 @@
 use std::io::Read;
+use std::io::Write;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tokenline::{render, Density};
 use tokenline::cache::runtime_dir;
@@ -11,7 +12,9 @@ fn main() {
     // run() returns the string to print (empty on any handled failure).
     let line = result.unwrap_or_default();
     if !line.is_empty() {
-        print!("{}", line);
+        let mut out = std::io::stdout();
+        let _ = out.write_all(line.as_bytes());
+        let _ = out.flush();
     }
     std::process::exit(0);
 }
