@@ -16,3 +16,7 @@ targets = [
 ]
 # CI backend that builds + publishes the above.
 ci = "github"
+# Anchor the release-tag trigger to a "tokenline-" prefix so binary tags
+# (tokenline-v0.1.0) are provably disjoint from the npm changesets tags
+# (@inbrace-tech/tokenline@x.y.z). Renames the workflow to tokenline-release.yml.
+tag-namespace = "tokenline"
