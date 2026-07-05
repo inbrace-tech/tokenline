@@ -38,7 +38,7 @@ fn unix_uid() -> String {
     (unsafe { libc_getuid() }).to_string()
 }
 #[cfg(unix)]
-extern "C" { #[link_name = "getuid"] fn libc_getuid() -> u32; }
+unsafe extern "C" { #[link_name = "getuid"] fn libc_getuid() -> u32; }
 
 #[cfg(windows)]
 fn platform_base() -> PathBuf {
