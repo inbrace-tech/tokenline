@@ -4,13 +4,13 @@ use tokenline::input::RawInput;
 
 fn strip_ansi(s: &str) -> String {
     let mut out = String::new();
-    let b = s.as_bytes();
-    let mut i = 0;
-    while i < b.len() {
-        if b[i] == 0x1b {
-            while i < b.len() && b[i] != b'm' { i += 1; }
-            i += 1; // skip 'm'
-        } else { out.push(b[i] as char); i += 1; }
+    let mut chars = s.chars();
+    while let Some(c) = chars.next() {
+        if c == '\x1b' {
+            for c2 in chars.by_ref() { if c2 == 'm' { break; } } // skip ESC…m
+        } else {
+            out.push(c);
+        }
     }
     out
 }
@@ -53,5 +53,20 @@ fn no_activity_hides_cost_line() {
             "context_window":{"used_percentage":1.0}}"#).unwrap();
     let out = strip_ansi(&render(raw, 1_783_000_000, &cache_scratch(), Density::Normal));
     assert!(!out.contains("cost "), "no turn => no cost line");
+}
+
+#[test]
+fn very_fast_pace_shows_eta_once() {
+    // now = 1_783_000_000; resets_at = now + 9000s = 1_783_009_000 = 2026-07-02T16:16:40Z.
+    // window 18000s, elapsed = 18000 - 9000 = 9000 (>= 10% of window).
+    // pace = 88 * 18000 / (9000 * 100) = 1.76 -> Pace::VeryFast.
+    let raw: RawInput = serde_json::from_str(
+        r#"{"model":{"display_name":"Opus 4.8"},
+            "context_window":{"used_percentage":9.0},
+            "rate_limits":{"five_hour":{"used_percentage":88.0,"resets_at":"2026-07-02T16:16:40Z"}}}"#).unwrap();
+    let out = strip_ansi(&render(raw, 1_783_000_000, &cache_scratch(), Density::Normal));
+    assert!(out.contains("⚡ pace!!"), "expected VeryFast pace flag:\n{}", out);
+    assert!(!out.contains("empties"), "ETA must not be duplicated via 'empties':\n{}", out);
+    assert_eq!(out.matches("left").count(), 1, "ETA must appear exactly once:\n{}", out);
 }
 

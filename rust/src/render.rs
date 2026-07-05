@@ -99,7 +99,7 @@ fn rl_segment(b: &mut Buf, label: &str, w: &RlWindow) {
     b.seg(Role::Faint, &"░".repeat(empty), false, false);
     b.seg(role, &format!(" {}% ", w.pct), false, blink);
     match w.pace {
-        Pace::VeryFast => b.seg(role, &format!("⚡ pace · empties {} ", fmt_eta(w.eta_secs)), false, false),
+        Pace::VeryFast => b.seg(role, "⚡ pace!! ", false, false),
         Pace::Fast => b.seg(role, "⚡ pace ", false, false),
         Pace::None => {}
     }
