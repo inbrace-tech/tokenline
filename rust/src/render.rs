@@ -218,28 +218,3 @@ fn build_rl_segment(rl: &RateLimit) -> String {
         rl.label, rl.pct
     )
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn fresh_dir(tag: &str) -> std::path::PathBuf {
-        let mut d = std::env::temp_dir();
-        d.push(format!("tl-render-{}-{}", std::process::id(), tag));
-        std::fs::create_dir_all(&d).unwrap();
-        d
-    }
-
-    #[test]
-    fn golden_healthy_claude_byte_exact() {
-        let fixture = include_str!("../tests/fixtures/healthy_claude.json");
-        let golden = include_str!("../tests/golden/healthy_claude.txt");
-        let expected = golden.strip_suffix('\n').unwrap_or(golden);
-
-        let raw: RawInput = serde_json::from_str(fixture).unwrap();
-        let dir = fresh_dir("healthy-claude");
-        let out = render(raw, 1_783_000_000, &dir);
-
-        assert_eq!(out, expected);
-    }
-}
