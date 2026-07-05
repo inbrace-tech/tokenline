@@ -1,0 +1,86 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Rust CI — gates the tokenline binary crate in rust/. Runs on every PR/push.
+# fmt + clippy + test across Linux/macOS/Windows, plus an MSRV build on the
+# declared floor (1.82). The Windows test leg runs the actual binary via stdin
+# (tests/never_crash.rs) — that is the "runs on Windows" done-criteria.
+# ─────────────────────────────────────────────────────────────────────────────
+name: Rust
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# Cancel stale PR runs; never cancel push-to-main runs.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: rust
+
+jobs:
+  fmt:
+    name: rustfmt
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88 # stable
+        with:
+          components: rustfmt
+      - run: cargo fmt --check
+
+  test:
+    name: test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88 # stable
+        with:
+          components: clippy
+      - name: Clippy (deny warnings)
+        run: cargo clippy --all-targets -- -D warnings
+      - name: Test (runs the built binary via stdin on this OS)
+        run: cargo test
+
+  msrv:
+    name: MSRV (1.85)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: dtolnay/rust-toolchain@98effd2fc0b766278e30ab86762dd5e9a8531399 # 1.85.0
+      - name: Build on the declared MSRV floor
+        run: cargo build --bins --lib
+
+  # Thin fan-in gate. This exact string "Rust" is the required status check
+  # in branch protection, so it must stay a single fixed name that fans in over
+  # fmt + test + msrv. `if: always()` + explicit result checks make it a real
+  # pass/fail instead of a "skipped" that branch protection treats as green.
+  rust:
+    name: Rust
+    needs: [fmt, test, msrv]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Gate on the Rust jobs
+        working-directory: ${{ github.workspace }}
+        run: |
+          if [ "${{ needs.fmt.result }}" != "success" ] \
+             || [ "${{ needs.test.result }}" != "success" ] \
+             || [ "${{ needs.msrv.result }}" != "success" ]; then
+            echo "::error::Rust fmt, test matrix, or MSRV build did not pass."
+            exit 1
+          fi
