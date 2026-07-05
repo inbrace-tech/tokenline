@@ -1,34 +1,49 @@
 #[derive(Clone, Copy)]
 pub enum Role {
-    Ink, Muted, Faint, Good, Warn, Caution, Critical, Cache, Accent,
-    Read, New, Write, Output,
+    Ink,
+    Muted,
+    Faint,
+    Good,
+    Warn,
+    Caution,
+    Critical,
+    Cache,
+    Accent,
+    Read,
+    New,
+    Write,
+    Output,
 }
 
 impl Role {
     // PULSE+ refined truecolor palette (24-bit).
     fn rgb(self) -> (u8, u8, u8) {
         match self {
-            Role::Ink      => (0xe6, 0xed, 0xf3),
-            Role::Muted    => (0x8b, 0x94, 0x9e),
-            Role::Faint    => (0x5b, 0x66, 0x73),
-            Role::Good     => (0x3f, 0xb9, 0x50),
-            Role::Warn     => (0xd2, 0x99, 0x22),
-            Role::Caution  => (0xdb, 0x6d, 0x28),
+            Role::Ink => (0xe6, 0xed, 0xf3),
+            Role::Muted => (0x8b, 0x94, 0x9e),
+            Role::Faint => (0x5b, 0x66, 0x73),
+            Role::Good => (0x3f, 0xb9, 0x50),
+            Role::Warn => (0xd2, 0x99, 0x22),
+            Role::Caution => (0xdb, 0x6d, 0x28),
             Role::Critical => (0xf0, 0x50, 0x3c),
-            Role::Cache    => (0x3f, 0xb9, 0x50),
-            Role::Accent   => (0x58, 0xa6, 0xff),
-            Role::Read     => (0x45, 0xc4, 0xa8),
-            Role::New      => (0x6c, 0x9e, 0xff),
-            Role::Write    => (0xe0, 0xa4, 0x58),
-            Role::Output   => (0xd1, 0x8a, 0xc9),
+            Role::Cache => (0x3f, 0xb9, 0x50),
+            Role::Accent => (0x58, 0xa6, 0xff),
+            Role::Read => (0x45, 0xc4, 0xa8),
+            Role::New => (0x6c, 0x9e, 0xff),
+            Role::Write => (0xe0, 0xa4, 0x58),
+            Role::Output => (0xd1, 0x8a, 0xc9),
         }
     }
     pub fn paint(self, text: &str, bold: bool, blink: bool) -> String {
         let (r, g, b) = self.rgb();
         let mut s = String::new();
         s.push_str(&format!("\x1b[38;2;{};{};{}m", r, g, b));
-        if bold { s.push_str("\x1b[1m"); }
-        if blink { s.push_str("\x1b[5m"); }
+        if bold {
+            s.push_str("\x1b[1m");
+        }
+        if blink {
+            s.push_str("\x1b[5m");
+        }
         s.push_str(text);
         s.push_str("\x1b[0m");
         s
@@ -49,14 +64,26 @@ pub fn fmt_k(v: u64) -> String {
 
 /// Mirrors tokenline.sh fmt_eta.
 pub fn fmt_eta(secs: i64) -> String {
-    if secs <= 0 { return "now".to_string(); }
-    if secs < 3600 { return format!("{}m", secs / 60); }
+    if secs <= 0 {
+        return "now".to_string();
+    }
+    if secs < 3600 {
+        return format!("{}m", secs / 60);
+    }
     if secs < 86_400 {
         let (h, m) = (secs / 3600, (secs % 3600) / 60);
-        return if m > 0 { format!("{}h{}m", h, m) } else { format!("{}h", h) };
+        return if m > 0 {
+            format!("{}h{}m", h, m)
+        } else {
+            format!("{}h", h)
+        };
     }
     let (d, h) = (secs / 86_400, (secs % 86_400) / 3600);
-    if h > 0 { format!("{}d{}h", d, h) } else { format!("{}d", d) }
+    if h > 0 {
+        format!("{}d{}h", d, h)
+    } else {
+        format!("{}d", d)
+    }
 }
 
 #[cfg(test)]

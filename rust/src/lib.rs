@@ -7,4 +7,4 @@ pub mod input;
 pub mod ratelimits;
 pub mod render;
 
-pub use render::{render, Density};
+pub use render::{Density, render};

@@ -2,45 +2,67 @@ use serde::Deserialize;
 
 #[derive(Deserialize, Default)]
 pub struct RawInput {
-    #[serde(default)] pub model: Model,
-    #[serde(default)] pub context_window: ContextWindow,
-    #[serde(default)] pub transcript_path: String,
-    #[serde(default)] pub session_id: String,
-    #[serde(default)] pub rate_limits: RateLimits,
+    #[serde(default)]
+    pub model: Model,
+    #[serde(default)]
+    pub context_window: ContextWindow,
+    #[serde(default)]
+    pub transcript_path: String,
+    #[serde(default)]
+    pub session_id: String,
+    #[serde(default)]
+    pub rate_limits: RateLimits,
 }
 
 #[derive(Deserialize, Default)]
-pub struct Model { #[serde(default)] pub display_name: String }
+pub struct Model {
+    #[serde(default)]
+    pub display_name: String,
+}
 
 #[derive(Deserialize, Default)]
 pub struct ContextWindow {
-    #[serde(default)] pub used_percentage: Option<f64>,
-    #[serde(default)] pub context_window_size: Option<u64>,
-    #[serde(default)] pub current_usage: Usage,
+    #[serde(default)]
+    pub used_percentage: Option<f64>,
+    #[serde(default)]
+    pub context_window_size: Option<u64>,
+    #[serde(default)]
+    pub current_usage: Usage,
 }
 
 #[derive(Deserialize, Default)]
 pub struct Usage {
-    #[serde(default)] pub input_tokens: u64,
-    #[serde(default)] pub output_tokens: u64,
-    #[serde(default)] pub cache_creation_input_tokens: u64,
-    #[serde(default)] pub cache_read_input_tokens: u64,
+    #[serde(default)]
+    pub input_tokens: u64,
+    #[serde(default)]
+    pub output_tokens: u64,
+    #[serde(default)]
+    pub cache_creation_input_tokens: u64,
+    #[serde(default)]
+    pub cache_read_input_tokens: u64,
 }
 
 #[derive(Deserialize, Default)]
 pub struct RateLimits {
-    #[serde(default)] pub five_hour: Option<RlRaw>,
-    #[serde(default)] pub seven_day: Option<RlRaw>,
+    #[serde(default)]
+    pub five_hour: Option<RlRaw>,
+    #[serde(default)]
+    pub seven_day: Option<RlRaw>,
 }
 
 #[derive(Deserialize, Default, Clone)]
 pub struct RlRaw {
-    #[serde(default)] pub used_percentage: Option<f64>,
-    #[serde(default)] pub resets_at: Option<String>,
+    #[serde(default)]
+    pub used_percentage: Option<f64>,
+    #[serde(default)]
+    pub resets_at: Option<String>,
 }
 
 #[derive(PartialEq, Debug)]
-pub enum Client { ClaudeCode, Antigravity }
+pub enum Client {
+    ClaudeCode,
+    Antigravity,
+}
 
 pub struct Session {
     pub model: String,
@@ -62,7 +84,8 @@ pub struct Session {
 impl Session {
     pub fn from_raw(r: RawInput) -> Session {
         let u = r.context_window.current_usage;
-        let tokens_used = u.input_tokens + u.cache_creation_input_tokens + u.cache_read_input_tokens;
+        let tokens_used =
+            u.input_tokens + u.cache_creation_input_tokens + u.cache_read_input_tokens;
 
         // Subagent transcript -> parent session (tokenline.sh:123-125)
         // Normalize Windows backslashes once, up front, so all contains()/replace()
@@ -70,7 +93,8 @@ impl Session {
         let mut transcript_path = r.transcript_path.replace('\\', "/");
         if transcript_path.contains("/subagents/") {
             if let Some(parent) = std::path::Path::new(&transcript_path)
-                .parent().and_then(|p| p.parent())
+                .parent()
+                .and_then(|p| p.parent())
             {
                 transcript_path = format!("{}.jsonl", parent.display());
             }
@@ -152,7 +176,9 @@ mod tests {
     fn detects_gemini_and_antigravity() {
         let raw: RawInput = serde_json::from_str(
             r#"{"model":{"display_name":"Gemini 2.5 Pro"},
-                "transcript_path":"/x/antigravity/y/z.jsonl"}"#).unwrap();
+                "transcript_path":"/x/antigravity/y/z.jsonl"}"#,
+        )
+        .unwrap();
         let s = Session::from_raw(raw);
         assert!(s.is_gemini);
         assert_eq!(s.cli_client, Client::Antigravity);
@@ -163,7 +189,9 @@ mod tests {
     fn normalizes_windows_backslash_paths() {
         // Backslash subagent path resolves to the parent .jsonl, same as the unix case.
         let raw: RawInput = serde_json::from_str(
-            r#"{"transcript_path":"C:\\Users\\x\\antigravity\\p\\subagents\\s\\t.jsonl"}"#).unwrap();
+            r#"{"transcript_path":"C:\\Users\\x\\antigravity\\p\\subagents\\s\\t.jsonl"}"#,
+        )
+        .unwrap();
         let s = Session::from_raw(raw);
         assert_eq!(s.cli_client, Client::Antigravity);
         assert!(s.transcript_path.contains("/antigravity-cli/"));

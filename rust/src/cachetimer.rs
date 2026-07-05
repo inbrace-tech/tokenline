@@ -1,10 +1,14 @@
-use std::path::Path;
 use crate::cache;
 use crate::epoch::iso8601_to_epoch;
 use crate::input::Session;
+use std::path::Path;
 
 #[derive(Debug)]
-pub enum Warmth { Warm, Cooling, Cold }
+pub enum Warmth {
+    Warm,
+    Cooling,
+    Cold,
+}
 
 pub struct CacheInfo {
     pub ttl_label: String,
@@ -16,17 +20,31 @@ pub struct CacheInfo {
 /// Read the last assistant/PLANNER turn's (timestamp, ephemeral_5m, ephemeral_1h)
 /// from the tail of the transcript. Returns (last_ts, e5m, e1h).
 fn scan_transcript(path: &str) -> (Option<i64>, u64, u64) {
-    let Ok(content) = std::fs::read_to_string(path) else { return (None, 0, 0); };
+    let Ok(content) = std::fs::read_to_string(path) else {
+        return (None, 0, 0);
+    };
     // Tail ~200 lines (tokenline.sh:199). Scan from the end for the last match.
     for line in content.lines().rev().take(200) {
-        let Ok(v) = serde_json::from_str::<serde_json::Value>(line) else { continue; };
+        let Ok(v) = serde_json::from_str::<serde_json::Value>(line) else {
+            continue;
+        };
         let t = v.get("type").and_then(|t| t.as_str()).unwrap_or("");
-        if t != "assistant" && t != "PLANNER_RESPONSE" { continue; }
-        let iso = v.get("timestamp").and_then(|x| x.as_str())
+        if t != "assistant" && t != "PLANNER_RESPONSE" {
+            continue;
+        }
+        let iso = v
+            .get("timestamp")
+            .and_then(|x| x.as_str())
             .or_else(|| v.get("created_at").and_then(|x| x.as_str()));
         let cc = v.pointer("/message/usage/cache_creation");
-        let e5m = cc.and_then(|c| c.get("ephemeral_5m_input_tokens")).and_then(|x| x.as_u64()).unwrap_or(0);
-        let e1h = cc.and_then(|c| c.get("ephemeral_1h_input_tokens")).and_then(|x| x.as_u64()).unwrap_or(0);
+        let e5m = cc
+            .and_then(|c| c.get("ephemeral_5m_input_tokens"))
+            .and_then(|x| x.as_u64())
+            .unwrap_or(0);
+        let e1h = cc
+            .and_then(|c| c.get("ephemeral_1h_input_tokens"))
+            .and_then(|x| x.as_u64())
+            .unwrap_or(0);
         return (iso.and_then(iso8601_to_epoch), e5m, e1h);
     }
     (None, 0, 0)
@@ -53,11 +71,15 @@ pub fn cache_info(s: &Session, now: i64, dir: &Path) -> CacheInfo {
         let (ts, a, b) = scan_transcript(&s.transcript_path);
         let ts = ts.or_else(|| file_mtime(&s.transcript_path)); // mtime fallback
         (ts, a, b)
-    } else { (None, 0, 0) };
+    } else {
+        (None, 0, 0)
+    };
 
     // Prefer cached ts if newer or transcript ts missing (tokenline.sh:216-223)
     if let Some(cached) = state.last_ts {
-        if last_ts.is_none_or(|t| cached > t) { last_ts = Some(cached); }
+        if last_ts.is_none_or(|t| cached > t) {
+            last_ts = Some(cached);
+        }
     }
     // Always have a timestamp (tokenline.sh:225-229)
     let last_ts = last_ts.unwrap_or(now);
@@ -82,11 +104,22 @@ pub fn cache_info(s: &Session, now: i64, dir: &Path) -> CacheInfo {
     let remaining = ttl - elapsed;
     // pct10 == remaining*10/ttl (tokenline.sh:260)
     let pct10 = if ttl > 0 { remaining * 10 / ttl } else { 0 };
-    let warmth = if remaining <= 0 { Warmth::Cold }
-        else if pct10 < 2 { Warmth::Cooling }   // < 20% left
-        else { Warmth::Warm };
+    let warmth = if remaining <= 0 {
+        Warmth::Cold
+    } else if pct10 < 2 {
+        Warmth::Cooling
+    }
+    // < 20% left
+    else {
+        Warmth::Warm
+    };
 
-    CacheInfo { ttl_label: ttl_label.to_string(), remaining_secs: remaining, warmth, is_1h: ttl == 3600 }
+    CacheInfo {
+        ttl_label: ttl_label.to_string(),
+        remaining_secs: remaining,
+        warmth,
+        is_1h: ttl == 3600,
+    }
 }
 
 #[cfg(test)]
@@ -100,17 +133,21 @@ mod tests {
         std::fs::create_dir_all(&d).unwrap();
         d
     }
-    fn sess(json: &str) -> Session { Session::from_raw(serde_json::from_str(json).unwrap()) }
+    fn sess(json: &str) -> Session {
+        Session::from_raw(serde_json::from_str(json).unwrap())
+    }
 
     #[test]
     fn fresh_session_starts_warm_at_full_ttl() {
         let dir = scratch();
         // no transcript, no cache => last_ts defaults to now => remaining == ttl
-        let s = sess(r#"{"session_id":"warm1","context_window":{"current_usage":
-            {"cache_read_input_tokens":100}}}"#);
+        let s = sess(
+            r#"{"session_id":"warm1","context_window":{"current_usage":
+            {"cache_read_input_tokens":100}}}"#,
+        );
         let now = 1_783_000_000;
         let ci = cache_info(&s, now, &dir);
-        assert_eq!(ci.ttl_label, "5m");           // no ephemeral fields => default 5m
+        assert_eq!(ci.ttl_label, "5m"); // no ephemeral fields => default 5m
         assert!(ci.remaining_secs > 290 && ci.remaining_secs <= 300);
         assert!(matches!(ci.warmth, Warmth::Warm));
     }
@@ -129,16 +166,26 @@ mod tests {
         )).unwrap();
         let turn_epoch = crate::epoch::iso8601_to_epoch("2026-07-05T00:00:00Z").unwrap();
         let now = turn_epoch + 100; // 100s after the turn
-        let s = sess(&format!(r#"{{"session_id":"h1","transcript_path":"{}",
+        let s = sess(&format!(
+            r#"{{"session_id":"h1","transcript_path":"{}",
             "context_window":{{"current_usage":{{"cache_read_input_tokens":100}}}}}}"#,
-            tp.display()));
+            tp.display()
+        ));
         // Prime last_tokens to match s.tokens_used so turn detection does NOT fire this
         // poll (tokenline.sh:185 fires on a *change*; a truly first-ever poll would stamp
         // `now` and clobber the transcript-derived ts, which is not what this test probes).
         // This models steady-state polling: no new turn since last render, so the last
         // real turn time must come from the transcript, not from "now".
-        crate::cache::store(&dir, "h1", &crate::cache::CacheState {
-            last_ts: None, ttl: 300, ttl_label: "5m".into(), last_tokens: 100 });
+        crate::cache::store(
+            &dir,
+            "h1",
+            &crate::cache::CacheState {
+                last_ts: None,
+                ttl: 300,
+                ttl_label: "5m".into(),
+                last_tokens: 100,
+            },
+        );
         let ci = cache_info(&s, now, &dir);
         assert_eq!(ci.ttl_label, "1h");
         assert!(ci.is_1h);
@@ -149,11 +196,21 @@ mod tests {
     #[test]
     fn expired_is_cold() {
         let dir = scratch();
-        let s = sess(r#"{"session_id":"cold1","context_window":{"current_usage":
-            {"cache_read_input_tokens":100}}}"#);
+        let s = sess(
+            r#"{"session_id":"cold1","context_window":{"current_usage":
+            {"cache_read_input_tokens":100}}}"#,
+        );
         // Prime the cache with an old timestamp + 5m ttl
-        crate::cache::store(&dir, "cold1", &crate::cache::CacheState{
-            last_ts: Some(1_000_000), ttl: 300, ttl_label: "5m".into(), last_tokens: 100 });
+        crate::cache::store(
+            &dir,
+            "cold1",
+            &crate::cache::CacheState {
+                last_ts: Some(1_000_000),
+                ttl: 300,
+                ttl_label: "5m".into(),
+                last_tokens: 100,
+            },
+        );
         let now = 1_000_000 + 400; // 400s later, ttl 300 => expired
         let ci = cache_info(&s, now, &dir);
         assert!(ci.remaining_secs <= 0);

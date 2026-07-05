@@ -1,13 +1,17 @@
 use std::path::PathBuf;
-use tokenline::{render, Density};
 use tokenline::input::RawInput;
+use tokenline::{Density, render};
 
 fn strip_ansi(s: &str) -> String {
     let mut out = String::new();
     let mut chars = s.chars();
     while let Some(c) = chars.next() {
         if c == '\x1b' {
-            for c2 in chars.by_ref() { if c2 == 'm' { break; } } // skip ESC…m
+            for c2 in chars.by_ref() {
+                if c2 == 'm' {
+                    break;
+                }
+            } // skip ESC…m
         } else {
             out.push(c);
         }
@@ -15,7 +19,9 @@ fn strip_ansi(s: &str) -> String {
     out
 }
 
-fn fixtures_dir() -> PathBuf { PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures") }
+fn fixtures_dir() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures")
+}
 
 fn cache_scratch(label: &str) -> PathBuf {
     let d = std::env::temp_dir().join(format!("tl-golden-{}-{}", std::process::id(), label));
@@ -26,7 +32,9 @@ fn cache_scratch(label: &str) -> PathBuf {
 #[test]
 fn healthy_claude_matches_golden() {
     let raw: RawInput = serde_json::from_str(
-        &std::fs::read_to_string(fixtures_dir().join("healthy_claude.json")).unwrap()).unwrap();
+        &std::fs::read_to_string(fixtures_dir().join("healthy_claude.json")).unwrap(),
+    )
+    .unwrap();
     // FIXED now so the cache countdown is deterministic.
     let now = 1_783_000_000;
     let out = render(raw, now, &cache_scratch("healthy"), Density::Normal);
@@ -40,8 +48,15 @@ fn gemini_hides_rate_limits() {
     let raw: RawInput = serde_json::from_str(
         r#"{"model":{"display_name":"Gemini 2.5 Pro"},
             "context_window":{"used_percentage":9.0,"context_window_size":1000000,
-              "current_usage":{"cache_read_input_tokens":100,"output_tokens":50}}}"#).unwrap();
-    let out = strip_ansi(&render(raw, 1_783_000_000, &cache_scratch("gemini"), Density::Normal));
+              "current_usage":{"cache_read_input_tokens":100,"output_tokens":50}}}"#,
+    )
+    .unwrap();
+    let out = strip_ansi(&render(
+        raw,
+        1_783_000_000,
+        &cache_scratch("gemini"),
+        Density::Normal,
+    ));
     assert!(!out.contains("5h"), "Gemini has no rate limits");
     assert!(!out.contains("7d"));
 }
@@ -50,8 +65,15 @@ fn gemini_hides_rate_limits() {
 fn no_activity_hides_cost_line() {
     let raw: RawInput = serde_json::from_str(
         r#"{"model":{"display_name":"Opus 4.8"},
-            "context_window":{"used_percentage":1.0}}"#).unwrap();
-    let out = strip_ansi(&render(raw, 1_783_000_000, &cache_scratch("noact"), Density::Normal));
+            "context_window":{"used_percentage":1.0}}"#,
+    )
+    .unwrap();
+    let out = strip_ansi(&render(
+        raw,
+        1_783_000_000,
+        &cache_scratch("noact"),
+        Density::Normal,
+    ));
     assert!(!out.contains("cost "), "no turn => no cost line");
 }
 
@@ -64,9 +86,26 @@ fn very_fast_pace_shows_eta_once() {
         r#"{"model":{"display_name":"Opus 4.8"},
             "context_window":{"used_percentage":9.0},
             "rate_limits":{"five_hour":{"used_percentage":88.0,"resets_at":"2026-07-02T16:16:40Z"}}}"#).unwrap();
-    let out = strip_ansi(&render(raw, 1_783_000_000, &cache_scratch("pace"), Density::Normal));
-    assert!(out.contains("⚡ pace!!"), "expected VeryFast pace flag:\n{}", out);
-    assert!(!out.contains("empties"), "ETA must not be duplicated via 'empties':\n{}", out);
-    assert_eq!(out.matches("left").count(), 1, "ETA must appear exactly once:\n{}", out);
+    let out = strip_ansi(&render(
+        raw,
+        1_783_000_000,
+        &cache_scratch("pace"),
+        Density::Normal,
+    ));
+    assert!(
+        out.contains("⚡ pace!!"),
+        "expected VeryFast pace flag:\n{}",
+        out
+    );
+    assert!(
+        !out.contains("empties"),
+        "ETA must not be duplicated via 'empties':\n{}",
+        out
+    );
+    assert_eq!(
+        out.matches("left").count(),
+        1,
+        "ETA must appear exactly once:\n{}",
+        out
+    );
 }
-
