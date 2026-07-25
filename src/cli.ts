@@ -56,16 +56,6 @@ function parseArgs(argv: string[]): Options {
       case '--claude':
         out.targetCli = 'claude'
         break
-      case '--target': {
-        const val = argv[++i]
-        if (val === 'antigravity' || val === 'claude') {
-          out.targetCli = val
-          if (val === 'antigravity') out.global = true
-        } else if (val) {
-          out.unknown.push(`--target ${val}`)
-        }
-        break
-      }
       case '--global':
         out.global = true
         break
@@ -109,7 +99,6 @@ ${bold('Commands')}
 ${bold('Options')}
   --antigravity Target Antigravity CLI (~/.gemini/antigravity-cli)
   --claude      Target Claude Code (default)
-  --target <cli> Target host CLI (claude | antigravity)
   --global      Target ~/.claude (global) instead of ./.claude (project)
   --dir <path>  Write tokenline.sh to a custom directory
   --dry-run     Show what would happen without writing anything

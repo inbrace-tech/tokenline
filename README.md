@@ -9,19 +9,21 @@
 ## Quickstart
 
 ### 1. Install (via npm)
-If you have **Node 18+**, run this inside your project repository to configure the statusline locally.
 
+Run the installer for your AI coding CLI:
+
+**Claude Code**
 ```bash
+# Per-project installation (./.claude/settings.json)
 npx @inbrace-tech/tokenline init
-```
 
-*Want it globally for all your Claude Code projects? Add `--global`:*
-```bash
+# Global installation (~/.claude/settings.json)
 npx @inbrace-tech/tokenline init --global
 ```
 
-*Using Antigravity CLI? Add `--antigravity`:*
+**Antigravity CLI**
 ```bash
+# Global installation (~/.gemini/antigravity-cli/settings.json)
 npx @inbrace-tech/tokenline init --antigravity
 ```
 
