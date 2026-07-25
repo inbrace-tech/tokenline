@@ -30,8 +30,4 @@ export interface ReadResult {
   raw?: string
 }
 
-export interface Target {
-  global: boolean
-  dir: string | null
-  targetCli?: CliTarget
-}
+export type Target = Pick<Options, 'global' | 'dir' | 'targetCli'>
