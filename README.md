@@ -15,9 +15,14 @@ If you have **Node 18+**, run this inside your project repository to configure t
 npx @inbrace-tech/tokenline init
 ```
 
-*Want it globally for all your projects? Add `--global` to the command.*
+*Want it globally for all your Claude Code projects? Add `--global`:*
 ```bash
 npx @inbrace-tech/tokenline init --global
+```
+
+*Using Antigravity CLI? Add `--antigravity`:*
+```bash
+npx @inbrace-tech/tokenline init --antigravity
 ```
 
 ### 2. Restart your CLI
@@ -117,7 +122,7 @@ Then restart Claude Code.
 
 `npx @inbrace-tech/tokenline init` is deliberately transparent about touching your config:
 
-- **Writes** `tokenline.sh` to `./.claude/` (or `~/.claude/` with `--global`).
+- **Writes** `tokenline.sh` to `./.claude/` (or `~/.claude/` with `--global`, or `~/.gemini/antigravity-cli/` with `--antigravity`).
 - **Merges** only the `statusLine` key into `settings.json` — every other setting is preserved.
 - **Backs up** `settings.json` to `settings.json.bak` before writing.
 - **Never clobbers** invalid JSON: if it can't parse your `settings.json`, it stops and prints the block to paste manually.
@@ -127,8 +132,7 @@ Other commands: `doctor` (check dependencies and config, change nothing) and `un
 
 ### Antigravity CLI
 
-`tokenline` detects the Antigravity CLI from the transcript path and switches to its provider equivalents automatically. Point Antigravity's statusline command at the same
-`tokenline.sh` — no extra flags needed.
+`tokenline` detects the Antigravity CLI from the transcript path and switches to its provider equivalents automatically. Use `npx @inbrace-tech/tokenline init --antigravity` to write `tokenline.sh` and patch `~/.gemini/antigravity-cli/settings.json`.
 
 ## How it works
 

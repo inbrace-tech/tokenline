@@ -83,7 +83,9 @@ export function cmdInit(opts: Options): void {
     `${alreadyOurs ? 'confirmed' : conflict ? 'replaced' : 'added'} statusLine in ${settingsPath}`,
   )
 
+  const targetName =
+    opts.targetCli === 'antigravity' ? 'Antigravity CLI' : 'Claude Code'
   console.log(
-    `\n${green('Done.')} Restart Claude Code to see the statusline.\n`,
+    `\n${green('Done.')} Restart ${targetName} to see the statusline.\n`,
   )
 }

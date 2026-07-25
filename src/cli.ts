@@ -6,8 +6,9 @@
 // your Claude Code settings.json. The statusline itself runs as
 // `bash tokenline.sh` — there is NO Node in the per-second hot path.
 //
-//   npx @inbrace-tech/tokenline init              # install into ~/.claude (project)
-//   npx @inbrace-tech/tokenline init --global     # install into ./.claude (global)
+//   npx @inbrace-tech/tokenline init              # install into ./.claude (project)
+//   npx @inbrace-tech/tokenline init --global     # install into ~/.claude (global)
+//   npx @inbrace-tech/tokenline init --antigravity # install into ~/.gemini/antigravity-cli
 //   npx @inbrace-tech/tokenline doctor            # check deps, change nothing
 //   npx @inbrace-tech/tokenline uninstall         # remove the statusLine block
 //
@@ -32,6 +33,7 @@ const PKG = JSON.parse(
 function parseArgs(argv: string[]): Options {
   const out: Options = {
     _: [],
+    targetCli: 'claude',
     dir: null,
     global: false,
     dryRun: false,
@@ -47,6 +49,21 @@ function parseArgs(argv: string[]): Options {
       case '--dir':
         out.dir = argv[++i] ?? null
         break
+      case '--antigravity':
+        out.targetCli = 'antigravity'
+        break
+      case '--claude':
+        out.targetCli = 'claude'
+        break
+      case '--target': {
+        const val = argv[++i]
+        if (val === 'antigravity' || val === 'claude') {
+          out.targetCli = val
+        } else if (val) {
+          out.unknown.push(`--target ${val}`)
+        }
+        break
+      }
       case '--global':
         out.global = true
         break
@@ -83,11 +100,14 @@ ${bold('Usage')}
   npx @inbrace-tech/tokenline <command> [options]
 
 ${bold('Commands')}
-  init          Install tokenline.sh and wire it into your Claude Code settings
+  init          Install tokenline.sh and wire it into settings
   doctor        Check dependencies and current config — changes nothing
   uninstall     Remove the tokenline statusLine block from settings
 
 ${bold('Options')}
+  --antigravity Target Antigravity CLI (~/.gemini/antigravity-cli)
+  --claude      Target Claude Code (default)
+  --target <cli> Target host CLI (claude | antigravity)
   --global      Target ~/.claude (global) instead of ./.claude (project)
   --dir <path>  Write tokenline.sh to a custom directory
   --dry-run     Show what would happen without writing anything

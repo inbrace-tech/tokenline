@@ -7,12 +7,20 @@ import type { Target } from '../shared/types'
 // "files"). In dev that resolves to the repo-root tokenline.sh.
 export const SCRIPT_SOURCE = join(__dirname, '..', 'tokenline.sh')
 
-export const claudeDir = (o: Target): string =>
-  o.global ? join(homedir(), '.claude') : resolve('.claude')
+export const baseConfigDir = (o: Target): string => {
+  if (o.targetCli === 'antigravity') {
+    return join(homedir(), '.gemini', 'antigravity-cli')
+  }
+  return o.global ? join(homedir(), '.claude') : resolve('.claude')
+}
+
+export const claudeDir = (o: Target): string => baseConfigDir(o)
 export const scriptTarget = (o: Target): string =>
-  o.dir ? resolve(o.dir, 'tokenline.sh') : join(claudeDir(o), 'tokenline.sh')
+  o.dir
+    ? resolve(o.dir, 'tokenline.sh')
+    : join(baseConfigDir(o), 'tokenline.sh')
 export const settingsTarget = (o: Target): string =>
-  join(claudeDir(o), 'settings.json')
+  join(baseConfigDir(o), 'settings.json')
 
 // Command the host CLI runs every second. Quote only when the path has a space,
 // to stay byte-identical to the install.sh snippet in the common case.

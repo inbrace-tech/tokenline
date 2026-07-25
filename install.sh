@@ -76,8 +76,9 @@ if [ "$missing" -ne 0 ]; then
   printf '\n'
 fi
 
-printf 'Add this to %s/.claude/settings.json\n' "$HOME"
-printf '(or your project .claude/settings.json), inside the top-level object:\n\n'
+printf 'Add this to %s/.claude/settings.json (or project .claude/settings.json)\n' "$HOME"
+printf 'or %s/.gemini/antigravity-cli/settings.json (for Antigravity CLI),\n' "$HOME"
+printf 'inside the top-level object:\n\n'
 cat <<EOF
   "statusLine": {
     "type": "command",
@@ -85,4 +86,4 @@ cat <<EOF
     "refreshInterval": 1
   }
 EOF
-printf '\nThen restart Claude Code. Enjoy your cache-aware statusline.\n\n'
+printf '\nThen restart Claude Code or Antigravity CLI. Enjoy your cache-aware statusline.\n\n'
