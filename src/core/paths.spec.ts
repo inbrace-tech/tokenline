@@ -4,7 +4,12 @@ import { join, resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 import type { Target } from '../shared/types'
-import { baseConfigDir, scriptTarget, settingsTarget } from './paths'
+import {
+  baseConfigDir,
+  scriptTarget,
+  settingsTarget,
+  targetLabel,
+} from './paths'
 
 describe('paths', () => {
   it('resolves project Claude config path by default', () => {
@@ -12,6 +17,7 @@ describe('paths', () => {
     expect(baseConfigDir(target)).toBe(resolve('.claude'))
     expect(scriptTarget(target)).toBe(resolve('.claude/tokenline.sh'))
     expect(settingsTarget(target)).toBe(resolve('.claude/settings.json'))
+    expect(targetLabel(target)).toBe('claude (project)')
   })
 
   it('resolves global Claude config path when global is true', () => {
@@ -21,6 +27,7 @@ describe('paths', () => {
     expect(settingsTarget(target)).toBe(
       join(homedir(), '.claude/settings.json'),
     )
+    expect(targetLabel(target)).toBe('claude (global)')
   })
 
   it('resolves Antigravity CLI config path when targetCli is antigravity', () => {
@@ -34,6 +41,7 @@ describe('paths', () => {
     expect(settingsTarget(target)).toBe(
       join(homedir(), '.gemini', 'antigravity-cli', 'settings.json'),
     )
+    expect(targetLabel(target)).toBe('antigravity (global)')
   })
 
   it('respects custom dir for scriptTarget even with antigravity targetCli', () => {

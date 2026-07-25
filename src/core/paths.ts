@@ -22,6 +22,11 @@ export const scriptTarget = (o: Target): string =>
 export const settingsTarget = (o: Target): string =>
   join(baseConfigDir(o), 'settings.json')
 
+export const targetLabel = (o: Target): string => {
+  if (o.targetCli === 'antigravity') return 'antigravity (global)'
+  return o.global ? 'claude (global)' : 'claude (project)'
+}
+
 // Command the host CLI runs every second. Quote only when the path has a space,
 // to stay byte-identical to the install.sh snippet in the common case.
 export const statusLineCommand = (scriptPath: string): string =>
