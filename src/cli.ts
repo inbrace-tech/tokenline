@@ -51,6 +51,7 @@ function parseArgs(argv: string[]): Options {
         break
       case '--antigravity':
         out.targetCli = 'antigravity'
+        out.global = true
         break
       case '--claude':
         out.targetCli = 'claude'
@@ -59,6 +60,7 @@ function parseArgs(argv: string[]): Options {
         const val = argv[++i]
         if (val === 'antigravity' || val === 'claude') {
           out.targetCli = val
+          if (val === 'antigravity') out.global = true
         } else if (val) {
           out.unknown.push(`--target ${val}`)
         }

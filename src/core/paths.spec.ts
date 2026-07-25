@@ -24,7 +24,7 @@ describe('paths', () => {
 
   it('resolves Antigravity CLI config path when targetCli is antigravity', () => {
     const target = {
-      global: false,
+      global: true,
       dir: null,
       targetCli: 'antigravity' as const,
     }
@@ -41,7 +41,7 @@ describe('paths', () => {
 
   it('respects custom dir for scriptTarget even with antigravity targetCli', () => {
     const target = {
-      global: false,
+      global: true,
       dir: '/custom/dir',
       targetCli: 'antigravity' as const,
     }

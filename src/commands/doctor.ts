@@ -21,7 +21,7 @@ export function cmdDoctor(): void {
     },
     {
       label: 'antigravity (global)',
-      target: { global: false, dir: null, targetCli: 'antigravity' },
+      target: { global: true, dir: null, targetCli: 'antigravity' },
     },
   ]
 
