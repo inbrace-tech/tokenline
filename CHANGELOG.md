@@ -1,5 +1,11 @@
 # @inbrace-tech/tokenline
 
+## 1.2.1
+
+### Patch Changes
+
+- 60ba6a6: Add `--antigravity` flag to installer CLI to target Antigravity CLI global settings (`~/.gemini/antigravity-cli/settings.json`).
+
 ## 1.2.0
 
 ### Minor Changes
