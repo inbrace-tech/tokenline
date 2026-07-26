@@ -1,5 +1,8 @@
+export type CliTarget = 'claude' | 'antigravity'
+
 export interface Options {
   _: string[]
+  targetCli: CliTarget
   dir: string | null
   global: boolean
   dryRun: boolean
@@ -27,4 +30,4 @@ export interface ReadResult {
   raw?: string
 }
 
-export type Target = Pick<Options, 'global' | 'dir'>
+export type Target = Pick<Options, 'global' | 'dir' | 'targetCli'>

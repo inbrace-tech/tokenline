@@ -37,5 +37,7 @@ export function cmdUninstall(opts: Options): void {
       }
     }
   }
-  console.log(`\n${green('Done.')} Restart Claude Code.\n`)
+  const targetName =
+    opts.targetCli === 'antigravity' ? 'Antigravity CLI' : 'Claude Code'
+  console.log(`\n${green('Done.')} Restart ${targetName}.\n`)
 }
