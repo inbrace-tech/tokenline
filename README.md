@@ -12,18 +12,17 @@
 
 Run the installer for your AI coding CLI:
 
-**Claude Code**
+**Claude Code Per-project installation (`./.claude/settings.json`)**
 ```bash
-# Per-project installation (./.claude/settings.json)
 npx @inbrace-tech/tokenline init
-
-# Global installation (~/.claude/settings.json)
+```
+**Claude Code Global installation (`~/.claude/settings.json`)**
+```bash
 npx @inbrace-tech/tokenline init --global
 ```
 
-**Antigravity CLI**
+**Antigravity CLI Global installation (`~/.gemini/antigravity-cli/settings.json`)**
 ```bash
-# Global installation (~/.gemini/antigravity-cli/settings.json)
 npx @inbrace-tech/tokenline init --antigravity
 ```
 
