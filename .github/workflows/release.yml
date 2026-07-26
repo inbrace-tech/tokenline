@@ -4,6 +4,11 @@
 # creates a "chore: version packages" PR, and publishes to NPM when merged.
 # The PR title/commit are set to a conventional-commits form (lowercase subject)
 # so the "PR title (semantic)" check passes on the auto-generated release PR.
+#
+# Publishing uses npm Trusted Publishing (OIDC) — no long-lived NPM_TOKEN is
+# stored as a secret. `id-token: write` lets the runner request a short-lived
+# OIDC token; npm exchanges it for a publish token automatically.
+# See: https://docs.npmjs.com/generating-provenance-statements
 # ─────────────────────────────────────────────────────────────────────────────
 name: Release
 
@@ -17,6 +22,9 @@ concurrency: ${{ github.workflow }}-${{ github.ref }}
 permissions:
   contents: write
   pull-requests: write
+  # Required for npm Trusted Publishing (OIDC) — lets the runner obtain a
+  # short-lived identity token that npm accepts in place of a static NPM_TOKEN.
+  id-token: write
 
 jobs:
   release:
@@ -41,4 +49,11 @@ jobs:
           commit: "chore: version packages"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          # NPM_TOKEN removed — Trusted Publishing (OIDC) is used instead.
+          # npm detects the OIDC token via the ACTIONS_ID_TOKEN_REQUEST_URL /
+          # ACTIONS_ID_TOKEN_REQUEST_TOKEN env vars injected automatically by
+          # GitHub when id-token: write is granted.
+          #
+          # NPM_CONFIG_PROVENANCE=true attaches a signed provenance statement to
+          # every published tarball, linking it back to this exact workflow run.
+          NPM_CONFIG_PROVENANCE: "true"
