@@ -42,6 +42,7 @@
 import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { pathToFileURL } from 'node:url'
 
 const LOCKFILE = 'pnpm-lock.yaml'
 const WORKSPACE_MANIFEST = 'pnpm-workspace.yaml'
@@ -453,4 +454,15 @@ async function main(): Promise<void> {
   console.log(`OK — ${scopeLabel}: nothing to report.`)
 }
 
-await main()
+// Run only when this module IS the entry point. The spec imports it for its
+// pure helpers, and a module that executes on import would run the whole gate —
+// including its `process.exit(1)` paths — inside the test runner. That is not
+// hypothetical: without this guard the suite dies on any checkout where
+// `git show origin/main:pnpm-lock.yaml` cannot resolve, which is every
+// shallow CI checkout.
+if (
+  process.argv[1] !== undefined &&
+  import.meta.url === pathToFileURL(process.argv[1]).href
+) {
+  await main()
+}
