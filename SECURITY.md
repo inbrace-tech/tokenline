@@ -56,3 +56,6 @@ Worth stating plainly, because it bounds what a vulnerability here can reach:
   Dependabot `cooldown` both hold a version for a few days after publication,
   and `.github/workflows/dependency-audit.yml` re-checks on every pull request
   that each newly resolved version is still published and past that floor.
+- **The dependency tree is swept daily** by
+  `.github/workflows/dependency-audit-daily.yml`, for published advisories and
+  for any version that has been withdrawn from the registry since it merged.

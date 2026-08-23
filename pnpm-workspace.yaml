@@ -30,7 +30,7 @@ minimumReleaseAge: 4320
 # dependencies. They are pinned anyway because this toolchain is what builds and
 # publishes the package — the machine worth protecting is the one that signs the
 # release. Drop an entry once every dependent resolves a patched version on its
-# own; `pnpm audit` in `.github/workflows/dependency-audit.yml` is what says when.
+# own; `pnpm audit` in `.github/workflows/dependency-audit-daily.yml` says when.
 overrides:
   # DoS via unbounded expansion (CVE-2026-14257 and its follow-up bypass).
   'brace-expansion@>=4.0.0 <5.0.9': '^5.0.9'

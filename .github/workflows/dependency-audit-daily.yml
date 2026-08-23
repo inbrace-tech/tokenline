@@ -1,0 +1,58 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Dependency audit (daily sweep) — the scheduled counterpart to the PR gate in
+# `dependency-audit.yml`. It never runs on a pull request.
+#
+# Two questions about the tree we already have. Does any version we depend on
+# carry a published advisory (`pnpm audit`), and has any of them been PULLED
+# from the registry since it merged?
+#
+# The second is the case the PR gate structurally cannot see: a version taken
+# down weeks after it landed is added by no pull request, and nothing about the
+# lockfile changes when the registry removes something — so only a periodic full
+# pass finds it.
+#
+# Neither question gates a merge. An advisory lands at a moment unrelated to any
+# PR, sometimes with no fix available, so blocking merges on it would redden PRs
+# whose diff cannot address the finding.
+# ─────────────────────────────────────────────────────────────────────────────
+name: Dependency audit (daily)
+
+on:
+  # 07:00 UTC ≈ 04:00 São Paulo, so a finding is waiting rather than landing
+  # mid-session. GitHub Actions cron is UTC.
+  schedule:
+    - cron: '0 7 * * *'
+  workflow_dispatch:
+
+# Least privilege: this job only reads.
+permissions:
+  contents: read
+
+jobs:
+  daily-sweep:
+    name: Daily sweep (advisories + takedowns)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - uses: pnpm/action-setup@d15e628ca66d93ee5f352c71671a7bc6a97af5c9 # v6.0.8
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+
+      # `pnpm audit` resolves from the lockfile and queries the advisory
+      # database; it needs no `node_modules`, so the install is skipped.
+      # `--audit-level=high` keeps the sweep on findings worth acting on — a low
+      # -severity advisory on a dev-only transitive dependency is noise.
+      - name: Audit the locked dependency tree
+        run: pnpm audit --audit-level=high
+
+      # The whole lockfile, takedown question only. Age is not re-asked: every
+      # entry passed the floor when it merged, so re-flagging one would be
+      # noise. Runs even when the audit step above failed, so one red answer
+      # never hides the other.
+      - name: No resolved version has been pulled from the registry
+        if: '!cancelled()'
+        run: node --experimental-strip-types scripts/check-lockfile-release-age.mts --all

@@ -1,62 +1,46 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# Dependency audit — the supply-chain gate for the pnpm-managed dev toolchain.
+# Dependency audit (PR gate) — does this pull request add a dependency version
+# that is too new, or one the registry has taken down?
+#
+# Scoped to the versions the PR ADDS, so it is silent — and does zero network
+# I/O — on a PR that leaves `pnpm-lock.yaml` alone.
 #
 # The published CLI has zero runtime dependencies, so nothing here reaches a
-# consumer's machine. What it protects is the machine that BUILDS and PUBLISHES
-# that CLI: a dev dependency compromised upstream runs inside this repository's
-# CI and on maintainer laptops, which is exactly where a release is signed.
+# consumer's machine. What this protects is the machine that BUILDS and
+# PUBLISHES that CLI: a dev dependency compromised upstream runs inside this
+# repository's CI and on maintainer laptops, which is exactly where a release
+# is signed.
 #
-# Two jobs answering two different questions, split on purpose:
-#
-#   `lockfile-release-age` (PR gate) — does this PR add a dependency version
-#   that is too new, or one the registry has taken down? Scoped to the versions
-#   the PR ADDS, so it is silent on PRs that leave `pnpm-lock.yaml` alone.
-#
-#   `daily-sweep` (scheduled + on demand) — two questions about the tree we
-#   already have. Does any version we depend on carry a published advisory
-#   (`pnpm audit`), and has any of them been PULLED from the registry since it
-#   merged? The second is the case the PR gate structurally cannot see: a
-#   version taken down weeks after it landed is added by no pull request.
-#   Neither is a PR gate — an advisory lands at a moment unrelated to any PR,
-#   sometimes with no fix available, so gating merges on it would redden PRs
-#   whose diff cannot address the finding.
-#
-# WHAT THESE ADD OVER `minimumReleaseAge`
+# WHAT THIS ADDS OVER `minimumReleaseAge`
 #
 # The release-age floor in `pnpm-workspace.yaml` is the primary control and it
 # is stronger than a preference: pnpm will not resolve a version younger than
 # the floor, falling back to an older compliant one instead. The age check here
 # is a backstop for the lockfile that floor never saw — produced by a pnpm older
-# than 10.16, or edited by hand.
+# than 10.16, or edited by hand — and it reads the number from that file so the
+# two cannot drift.
 #
-# The takedown check is what no local setting can provide. A malicious release
-# is REMOVED from the registry rather than aged out, so a version that has
-# disappeared is the signal worth watching — and because removal can happen long
-# after a version merged, the sweep asks it over the WHOLE lockfile, not just
-# what a PR adds.
+# The takedown check is what no local setting can provide: a malicious release
+# is REMOVED from the registry rather than aged out. Because removal can happen
+# long after a version merged, the whole-lockfile pass lives in the scheduled
+# counterpart, `dependency-audit-daily.yml`.
 # ─────────────────────────────────────────────────────────────────────────────
 name: Dependency audit
 
 on:
   # Left unfiltered by `paths:` on purpose — a required check that never runs is
-  # indistinguishable from one that passed. The gate is already free on a PR
-  # with no lockfile change: it does zero network I/O.
+  # indistinguishable from one that passed, and this job is already free on a PR
+  # with no lockfile change.
   pull_request:
     branches: [main]
-  # 07:00 UTC ≈ 04:00 São Paulo, so a finding is waiting rather than landing
-  # mid-session. GitHub Actions cron is UTC.
-  schedule:
-    - cron: '0 7 * * *'
-  workflow_dispatch:
 
-# Least privilege: both jobs only read.
+# Least privilege: this job only reads.
 permissions:
   contents: read
 
 jobs:
   lockfile-release-age:
     name: Lockfile release age
-    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -80,32 +64,3 @@ jobs:
         run: |
           node --experimental-strip-types \
             scripts/check-lockfile-release-age.mts --base "${BASE_SHA}" --verbose
-
-  daily-sweep:
-    name: Daily sweep (advisories + takedowns)
-    if: github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-
-      - uses: pnpm/action-setup@d15e628ca66d93ee5f352c71671a7bc6a97af5c9 # v6.0.8
-
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version-file: .nvmrc
-
-      # `pnpm audit` resolves from the lockfile and queries the advisory
-      # database; it needs no `node_modules`, so the install is skipped.
-      # `--audit-level=high` keeps the sweep on findings worth acting on — a low
-      # -severity advisory on a dev-only transitive dependency is noise.
-      - name: Audit the locked dependency tree
-        run: pnpm audit --audit-level=high
-
-      # The whole lockfile, takedown question only. Age is not re-asked: every
-      # entry passed the floor when it merged, so re-flagging one would be
-      # noise. Runs even when the audit step above failed, so one red answer
-      # never hides the other.
-      - name: No resolved version has been pulled from the registry
-        if: '!cancelled()'
-        run: node --experimental-strip-types scripts/check-lockfile-release-age.mts --all
