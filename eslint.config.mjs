@@ -56,6 +56,16 @@ export default defineConfig(
       'n/no-unsupported-features/node-builtins': 'error',
     },
   },
+  // Repository tooling under `scripts/` — plain JavaScript, never bundled into
+  // `dist/`. Type-aware rules are turned off here rather than pointed at a
+  // tsconfig: these files are untyped `.mjs` by design, so every value crossing
+  // an I/O boundary (a parsed registry response) is `any` and the type-aware
+  // rules report the shape of the language, not a defect. `pnpm typecheck`
+  // still owns `src/`, which is where the typed contract lives.
+  {
+    files: ['scripts/**/*.mjs'],
+    extends: [tseslint.configs.disableTypeChecked],
+  },
   // Test files: vitest's recommended rules. Specs use bare globals (`it`,
   // `expect`, …) via `globals: true` in vitest.config.ts, so declare them here.
   {

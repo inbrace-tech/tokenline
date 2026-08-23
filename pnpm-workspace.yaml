@@ -1,2 +1,41 @@
+# Packages allowed to run install-time lifecycle scripts. pnpm blocks every
+# dependency's preinstall/install/postinstall by default; only what is listed
+# here executes. That default is the reason a compromised transitive dependency
+# cannot run code here just because it was installed — keep this list minimal
+# and add an entry only when a package genuinely needs to build a native binary.
 allowBuilds:
   esbuild: true
+
+# Supply-chain quarantine: refuse to resolve a version published less than this
+# many minutes ago (4320 = 3 days).
+#
+# Compromised releases are typically detected and pulled within hours of
+# publication, so the highest-risk moment in a package's life is right after it
+# appears. Waiting the version out means a malicious release is usually gone
+# before this repository can resolve it — the cheapest control available against
+# a registry-account compromise, and one that costs nothing but freshness we do
+# not need. It matches the `cooldown` in `.github/dependabot.yml`, so an
+# automated bump and a maintainer running `pnpm add` sit behind the same floor.
+#
+# Enforcement on a PR is NOT this key — it steers resolution on the machine that
+# runs it. `scripts/check-lockfile-release-age.mjs` re-checks the versions a PR
+# adds against the registry, reading the number from this line.
+minimumReleaseAge: 4320
+
+# Targeted overrides for advisories in the dev toolchain's transitive graph.
+# Each key is a version RANGE, so only the vulnerable versions are redirected
+# and packages legitimately depending on an older major are left alone.
+#
+# None of these reaches a consumer: the published CLI has zero runtime
+# dependencies. They are pinned anyway because this toolchain is what builds and
+# publishes the package — the machine worth protecting is the one that signs the
+# release. Drop an entry once every dependent resolves a patched version on its
+# own; `pnpm audit` in `.github/workflows/dependency-audit.yml` is what says when.
+overrides:
+  # DoS via unbounded expansion (CVE-2026-14257 and its follow-up bypass).
+  'brace-expansion@>=4.0.0 <5.0.9': '^5.0.9'
+  # Quadratic CPU consumption resolving `!!omap` (CVE-2026-59870).
+  'js-yaml@>=3.0.0 <3.15.1': '^3.15.1'
+  'js-yaml@>=4.0.0 <4.3.1': '^4.3.1'
+  # Custom generators can loop indefinitely when size is zero.
+  'nanoid@<3.3.18': '^3.3.18'

@@ -1,0 +1,97 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Dependency audit — the supply-chain gate for the pnpm-managed dev toolchain.
+#
+# The published CLI has zero runtime dependencies, so nothing here reaches a
+# consumer's machine. What it protects is the machine that BUILDS and PUBLISHES
+# that CLI: a dev dependency compromised upstream runs inside this repository's
+# CI and on maintainer laptops, which is exactly where a release is signed.
+#
+# Two jobs answering two different questions, split on purpose:
+#
+#   `lockfile-release-age` (PR gate) — does this PR add a dependency version
+#   that is too new, or one the registry has taken down? Scoped to the versions
+#   the PR ADDS, so it is silent on PRs that leave `pnpm-lock.yaml` alone.
+#
+#   `known-vulnerabilities` (scheduled + on demand) — does the tree we already
+#   have carry a published advisory? This is `pnpm audit`, and it is
+#   deliberately NOT a PR gate: an advisory lands at a moment unrelated to any
+#   PR, sometimes with no fix available, so gating merges on it would redden
+#   PRs whose diff cannot address the finding.
+#
+# WHY THE PR GATE EXISTS WHEN `minimumReleaseAge` IS ALREADY SET
+#
+# `pnpm-workspace.yaml` sets a release-age floor, but that steers resolution on
+# the machine that runs it — and a lockfile can reach this branch from a
+# contributor's checkout, a fork, or a Dependabot security update, which
+# bypasses the cooldown by design. The gate re-asserts the floor against the
+# artifact that actually merges, reading the number from `pnpm-workspace.yaml`
+# so the two cannot drift.
+#
+# The takedown arm has no counterpart in any local setting: a version REMOVED
+# from the registry ages past every floor while remaining uninstallable, and
+# removal is what happens to a malicious release.
+# ─────────────────────────────────────────────────────────────────────────────
+name: Dependency audit
+
+on:
+  # Left unfiltered by `paths:` on purpose — a required check that never runs is
+  # indistinguishable from one that passed. The gate is already free on a PR
+  # with no lockfile change: it does zero network I/O.
+  pull_request:
+    branches: [main]
+  # 07:00 UTC ≈ 04:00 São Paulo, so a finding is waiting rather than landing
+  # mid-session. GitHub Actions cron is UTC.
+  schedule:
+    - cron: '0 7 * * *'
+  workflow_dispatch:
+
+# Least privilege: both jobs only read.
+permissions:
+  contents: read
+
+jobs:
+  lockfile-release-age:
+    name: Lockfile release age
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # `fetch-depth: 0` = full history, so `git show <base>:pnpm-lock.yaml`
+      # resolves. The gate compares against the PR's own base SHA rather than
+      # whatever `origin/main` points at, so a base that moved mid-review does
+      # not silently change what this PR is judged against.
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+
+      # Node only — no pnpm, no install. The gate reads two lockfile texts and
+      # talks to the registry over `fetch`; it imports nothing from the tree.
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+
+      - name: Every version this PR adds is published and past the age floor
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: node scripts/check-lockfile-release-age.mjs --base "${BASE_SHA}" --verbose
+
+  known-vulnerabilities:
+    name: Known vulnerabilities (pnpm audit)
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - uses: pnpm/action-setup@d15e628ca66d93ee5f352c71671a7bc6a97af5c9 # v6.0.8
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+
+      # `pnpm audit` resolves from the lockfile and queries the advisory
+      # database; it needs no `node_modules`, so the install is skipped.
+      # `--audit-level=high` keeps the sweep on findings worth acting on — a low
+      # -severity advisory on a dev-only transitive dependency is noise.
+      - name: Audit the locked dependency tree
+        run: pnpm audit --audit-level=high
