@@ -12,24 +12,28 @@
 #   that is too new, or one the registry has taken down? Scoped to the versions
 #   the PR ADDS, so it is silent on PRs that leave `pnpm-lock.yaml` alone.
 #
-#   `known-vulnerabilities` (scheduled + on demand) — does the tree we already
-#   have carry a published advisory? This is `pnpm audit`, and it is
-#   deliberately NOT a PR gate: an advisory lands at a moment unrelated to any
-#   PR, sometimes with no fix available, so gating merges on it would redden
-#   PRs whose diff cannot address the finding.
+#   `daily-sweep` (scheduled + on demand) — two questions about the tree we
+#   already have. Does any version we depend on carry a published advisory
+#   (`pnpm audit`), and has any of them been PULLED from the registry since it
+#   merged? The second is the case the PR gate structurally cannot see: a
+#   version taken down weeks after it landed is added by no pull request.
+#   Neither is a PR gate — an advisory lands at a moment unrelated to any PR,
+#   sometimes with no fix available, so gating merges on it would redden PRs
+#   whose diff cannot address the finding.
 #
-# WHY THE PR GATE EXISTS WHEN `minimumReleaseAge` IS ALREADY SET
+# WHAT THESE ADD OVER `minimumReleaseAge`
 #
-# `pnpm-workspace.yaml` sets a release-age floor, but that steers resolution on
-# the machine that runs it — and a lockfile can reach this branch from a
-# contributor's checkout, a fork, or a Dependabot security update, which
-# bypasses the cooldown by design. The gate re-asserts the floor against the
-# artifact that actually merges, reading the number from `pnpm-workspace.yaml`
-# so the two cannot drift.
+# The release-age floor in `pnpm-workspace.yaml` is the primary control and it
+# is stronger than a preference: pnpm will not resolve a version younger than
+# the floor, falling back to an older compliant one instead. The age check here
+# is a backstop for the lockfile that floor never saw — produced by a pnpm older
+# than 10.16, or edited by hand.
 #
-# The takedown arm has no counterpart in any local setting: a version REMOVED
-# from the registry ages past every floor while remaining uninstallable, and
-# removal is what happens to a malicious release.
+# The takedown check is what no local setting can provide. A malicious release
+# is REMOVED from the registry rather than aged out, so a version that has
+# disappeared is the signal worth watching — and because removal can happen long
+# after a version merged, the sweep asks it over the WHOLE lockfile, not just
+# what a PR adds.
 # ─────────────────────────────────────────────────────────────────────────────
 name: Dependency audit
 
@@ -73,10 +77,12 @@ jobs:
       - name: Every version this PR adds is published and past the age floor
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        run: node scripts/check-lockfile-release-age.mjs --base "${BASE_SHA}" --verbose
+        run: |
+          node --experimental-strip-types \
+            scripts/check-lockfile-release-age.mts --base "${BASE_SHA}" --verbose
 
-  known-vulnerabilities:
-    name: Known vulnerabilities (pnpm audit)
+  daily-sweep:
+    name: Daily sweep (advisories + takedowns)
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -95,3 +101,11 @@ jobs:
       # -severity advisory on a dev-only transitive dependency is noise.
       - name: Audit the locked dependency tree
         run: pnpm audit --audit-level=high
+
+      # The whole lockfile, takedown question only. Age is not re-asked: every
+      # entry passed the floor when it merged, so re-flagging one would be
+      # noise. Runs even when the audit step above failed, so one red answer
+      # never hides the other.
+      - name: No resolved version has been pulled from the registry
+        if: '!cancelled()'
+        run: node --experimental-strip-types scripts/check-lockfile-release-age.mts --all

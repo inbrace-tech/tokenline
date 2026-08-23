@@ -11,8 +11,9 @@
 // format change would leave every fixture case green while the gate parsed an
 // empty set and reported a clean delta forever.
 //
-// Imports the vitest globals explicitly (rather than relying on `globals: true`)
-// because the ESLint spec block is scoped to `**/*.spec.ts`.
+// Imports the vitest globals explicitly rather than relying on `globals: true`,
+// since this file is type-checked by `scripts/tsconfig.json`, which does not
+// pull in `vitest/globals`.
 // ==============================================================================
 
 import { execFileSync } from 'node:child_process'
@@ -23,13 +24,14 @@ import { describe, expect, it } from 'vitest'
 
 import {
   addedResolvedVersions,
+  allResolvedVersions,
   evaluatePackage,
   formatMinutes,
   formatViolations,
   parseMinimumReleaseAge,
   parseResolvedVersions,
   splitResolvedKey,
-} from './check-lockfile-release-age.mjs'
+} from './check-lockfile-release-age.mts'
 
 const BASE_LOCKFILE = [
   'lockfileVersion: 9.0',
@@ -101,6 +103,18 @@ describe('splitResolvedKey', () => {
       name: 'example',
       version: '1.0.0-rc.1',
     })
+  })
+})
+
+describe('allResolvedVersions', () => {
+  it('returns every resolution, which is what the --all sweep walks', () => {
+    // The sweep's whole point is that it does not depend on a base ref: a
+    // version pulled from the registry long after it merged is added by no
+    // pull request, so only a full pass over the lockfile can see it.
+    expect(allResolvedVersions(BASE_LOCKFILE)).toEqual([
+      { name: '@scope/example', version: '2.0.0' },
+      { name: 'example', version: '1.0.0' },
+    ])
   })
 })
 
@@ -204,6 +218,49 @@ describe('evaluatePackage', () => {
     })
 
     expect(violation?.code).toBe('publish-date-unknown')
+  })
+
+  it('sweep mode still reports a taken-down version', () => {
+    // `minimumReleaseAgeMinutes: null` is what `--all` passes. The takedown
+    // question is the one the PR gate structurally cannot ask about an entry
+    // that merged weeks ago, so it must survive the sweep's narrower scope.
+    const violation = evaluatePackage({
+      pkg: { name: 'example', version: '1.0.1' },
+      fact: { publishedAt: '2026-01-10T00:00:00.000Z', stillPublished: false },
+      now: NOW,
+      minimumReleaseAgeMinutes: null,
+    })
+
+    expect(violation?.code).toBe('version-absent-from-registry')
+  })
+
+  it('sweep mode does not re-flag a fresh version as too fresh', () => {
+    // Every entry already on the branch passed the floor when it merged;
+    // re-flagging one that merged yesterday would make the daily sweep noise.
+    expect(
+      evaluatePackage({
+        pkg: { name: 'example', version: '1.0.1' },
+        fact: {
+          publishedAt: new Date(NOW - 90 * 60_000).toISOString(),
+          stillPublished: true,
+        },
+        now: NOW,
+        minimumReleaseAgeMinutes: null,
+      }),
+    ).toBeNull()
+  })
+
+  it('sweep mode tolerates a missing publish date', () => {
+    // The date is only needed to answer the age question, which the sweep does
+    // not ask — so an old package with thin metadata must not fail it.
+    expect(
+      evaluatePackage({
+        pkg: { name: 'example', version: '1.0.1' },
+        fact: { publishedAt: undefined, stillPublished: true },
+        now: NOW,
+        minimumReleaseAgeMinutes: null,
+      }),
+    ).toBeNull()
   })
 
   it('passes a version that clears the floor by a minute', () => {

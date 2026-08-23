@@ -13,8 +13,8 @@ export default defineConfig({
     globals: true,
     // Co-locate specs next to the source they cover: src/**/*.spec.ts.
     // `scripts/` holds repository tooling (never bundled into dist/), whose
-    // specs are plain .mjs and import the vitest globals explicitly.
-    include: ['src/**/*.spec.ts', 'scripts/**/*.spec.mjs'],
+    // specs are .mts and import the vitest globals explicitly.
+    include: ['src/**/*.spec.ts', 'scripts/**/*.spec.mts'],
     // Never collect specs from worktree copies under .claude/.
     exclude: [...configDefaults.exclude, '**/.claude/**'],
   },
