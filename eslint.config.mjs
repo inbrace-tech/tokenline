@@ -59,7 +59,7 @@ export default defineConfig(
   // Test files: vitest's recommended rules. Specs use bare globals (`it`,
   // `expect`, …) via `globals: true` in vitest.config.ts, so declare them here.
   {
-    files: ['**/*.spec.ts'],
+    files: ['**/*.spec.ts', '**/*.spec.mts'],
     languageOptions: {
       globals: {
         ...globals.node,

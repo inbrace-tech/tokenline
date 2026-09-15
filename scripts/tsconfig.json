@@ -1,0 +1,29 @@
+{
+  // Dedicated TS config for repository tooling under `scripts/`.
+  //
+  // Why it is separate from the root `tsconfig.json`: that one owns the
+  // *published* CLI — `rootDir: "src"`, `outDir: "dist"`, and the `engines.node`
+  // floor guarded by eslint-plugin-n. Tooling here is neither compiled nor
+  // shipped, and it runs on the pinned dev Node from `.nvmrc`, so it needs a
+  // different module setting and no build output at all.
+  //
+  // Being a real `tsconfig.json` inside the folder is what lets typescript
+  // -eslint's project service find it automatically, so these files get the
+  // same type-aware linting as `src/` instead of an opt-out.
+  //
+  // `module: nodenext` matches how Node actually loads them (`.mts` = ESM), and
+  // `allowImportingTsExtensions` is what permits `./x.mts` in an import
+  // specifier — Node's ESM resolver does not guess extensions. That flag
+  // requires `noEmit`, which is already true: these files are executed by
+  // Node's type stripping, never compiled.
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "rootDir": ".",
+    "types": ["node"]
+  },
+  "include": ["**/*.mts"]
+}

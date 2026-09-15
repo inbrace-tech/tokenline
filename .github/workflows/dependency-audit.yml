@@ -1,0 +1,68 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Dependency audit (PR gate) — does this pull request add a dependency version
+# that is too new, or one the registry has taken down?
+#
+# Scoped to the versions the PR ADDS, so it is silent — and does zero network
+# I/O — on a PR that leaves `pnpm-lock.yaml` alone.
+#
+# The published CLI has zero runtime dependencies, so nothing here reaches a
+# consumer's machine. What this protects is the machine that BUILDS and
+# PUBLISHES that CLI: a dev dependency compromised upstream runs inside this
+# repository's CI and on maintainer laptops, which is exactly where a release
+# is signed.
+#
+# WHAT THIS ADDS OVER `minimumReleaseAge`
+#
+# The release-age floor in `pnpm-workspace.yaml` is the primary control and it
+# is stronger than a preference: pnpm will not resolve a version younger than
+# the floor, falling back to an older compliant one instead. The age check here
+# is a backstop for the lockfile that floor never saw — produced by a pnpm older
+# than 10.16, or edited by hand — and it reads the number from that file so the
+# two cannot drift.
+#
+# The takedown check is what no local setting can provide: a malicious release
+# is REMOVED from the registry rather than aged out. Because removal can happen
+# long after a version merged, the whole-lockfile pass lives in the scheduled
+# counterpart, `dependency-audit-daily.yml`.
+# ─────────────────────────────────────────────────────────────────────────────
+name: Dependency audit
+
+on:
+  # Left unfiltered by `paths:` on purpose — a required check that never runs is
+  # indistinguishable from one that passed, and this job is already free on a PR
+  # with no lockfile change.
+  pull_request:
+    branches: [main]
+
+# Least privilege: this job only reads.
+permissions:
+  contents: read
+
+jobs:
+  lockfile-release-age:
+    name: Lockfile release age
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # `fetch-depth: 0` = full history, so `git show <base>:pnpm-lock.yaml`
+      # resolves. The gate compares against the PR's own base SHA rather than
+      # whatever `origin/main` points at, so a base that moved mid-review does
+      # not silently change what this PR is judged against.
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          # Never pushes, so the token must not outlive the checkout step.
+          persist-credentials: false
+
+      # Node only — no pnpm, no install. The gate reads two lockfile texts and
+      # talks to the registry over `fetch`; it imports nothing from the tree.
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+
+      - name: Every version this PR adds is published and past the age floor
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          node --experimental-strip-types \
+            scripts/check-lockfile-release-age.mts --base "${BASE_SHA}" --verbose
