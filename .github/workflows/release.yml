@@ -32,10 +32,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      # The one checkout that keeps its credentials: changesets/action pushes the
-      # "chore: version packages" branch with them. Every other workflow sets
-      # persist-credentials: false.
+      # No persisted credentials here either. changesets/action never reuses the
+      # checkout's token for its pushes: v1 writes its own ~/.netrc from
+      # GITHUB_TOKEN, and v2 pushes through the GitHub API (or, with
+      # push-with-git-cli, a command-scoped auth header). Dropping the checkout's
+      # copy keeps the token out of .git/config while `pnpm install` runs
+      # dependency build scripts in the step below.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       # Setup node + pnpm + install (Node from .nvmrc, pnpm from package.json)
       - uses: ./.github/actions/setup-node-pnpm
@@ -43,15 +48,24 @@ jobs:
       - name: Create Release Pull Request or Publish
         id: changesets
         uses: changesets/action@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
+        # v2 inputs (v1's publish/title/commit were renamed and now fail the
+        # step). It requires @changesets/cli v3, pushes the version commit and
+        # the release tag through the GitHub API with the default `github-token`,
+        # and still creates GitHub Releases by default.
         with:
-          # This triggers the "release" script we added to package.json
-          publish: pnpm run release
+          # The "release" script in package.json: build, then `changeset
+          # publish`, which writes the NDJSON the action reads (via the
+          # CHANGESETS_OUTPUT env it injects) to tag and create the Release.
+          publish-script: pnpm run release
           # Conventional-commits title for the auto-generated release PR, so the
           # "PR title (semantic)" check passes (it requires a lowercase subject).
-          title: "chore: version packages"
-          commit: "chore: version packages"
+          pr-title: "chore: version packages"
+          commit-message: "chore: version packages"
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # No GITHUB_TOKEN here: v2 reads the default `github-token` input,
+          # hands it to the publish script itself, and fails if an env copy
+          # ever differs from the input.
+          #
           # NPM_TOKEN removed — Trusted Publishing (OIDC) is used instead.
           # npm detects the OIDC token via the ACTIONS_ID_TOKEN_REQUEST_URL /
           # ACTIONS_ID_TOKEN_REQUEST_TOKEN env vars injected automatically by

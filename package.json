@@ -51,7 +51,7 @@
     "access": "public"
   },
   "devDependencies": {
-    "@changesets/cli": "^2.31.0",
+    "@changesets/cli": "^3.0.2",
     "@eslint/js": "10.0.1",
     "@types/node": "24.13.4",
     "@vitest/eslint-plugin": "1.6.27",

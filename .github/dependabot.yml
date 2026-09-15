@@ -1,8 +1,9 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # Dependabot — keeps the pinned GitHub Actions SHAs and the CLI's dev
 # dependencies fresh. Two ecosystems: github-actions (workflows + the composite
-# action) and npm (the pnpm-managed devDependencies for src/cli.ts). Each is
-# grouped into one weekly PR with a `chore` prefix so it passes pr-title.yml.
+# action) and npm (the pnpm-managed devDependencies for src/cli.ts). Minors and
+# patches are grouped into one weekly PR per ecosystem, with a `chore` prefix so
+# it passes pr-title.yml; an action major comes as its own PR.
 #
 # The npm group deliberately skips major bumps (see its `ignore` below): minors
 # and patches flow automatically, but taking a major (TypeScript, @types/node,
@@ -24,10 +25,18 @@ updates:
     # 7 days, the npm minor window. Security updates still bypass it.
     cooldown:
       default-days: 7
+    # Only minors and patches are grouped. An action MAJOR arrives as its own PR:
+    # a major can rename inputs or change what it requires (changesets/action v2
+    # needs Changesets CLI v3), and bundled with routine SHA bumps it merged
+    # unnoticed and broke the release job. Its own PR keeps it visible and
+    # reviewable on its own.
     groups:
-      all-actions:
+      actions-minor-and-patch:
         patterns:
           - "*"
+        update-types:
+          - minor
+          - patch
     commit-message:
       prefix: chore
       include: scope
