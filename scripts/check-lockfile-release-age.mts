@@ -1,36 +1,19 @@
 // ==============================================================================
-// Lockfile release-age gate
+// Lockfile release-age gate — entry point (I/O half)
 //
 //   node --experimental-strip-types scripts/check-lockfile-release-age.mts \
 //     [--base <ref> | --all] [--verbose]
 //
-// Asks the npm registry two questions about the versions this repository
-// resolves, and fails when either answer is wrong:
+// Asks the npm registry whether the versions `pnpm-lock.yaml` resolves are still
+// published and, on a pull request, old enough. What each mode asks, and why,
+// is written up in the pure half, `check-lockfile-release-age.logic.mts`. This
+// file only gathers the inputs (argv, git, the working tree, the registry),
+// hands them to that half, and turns its answer into an exit code.
 //
-//   1. Is the version still published?  A malicious release is TAKEN DOWN, not
-//      aged out, so a lockfile pinning a version that has disappeared from the
-//      registry is reporting a takedown. No local setting can observe this —
-//      which is what earns this gate its place.
-//   2. Is it old enough?  `minimumReleaseAge` in `pnpm-workspace.yaml` already
-//      keeps pnpm from RESOLVING a version younger than the floor, so this is a
-//      backstop rather than the primary control: it catches a lockfile produced
-//      by a pnpm older than 10.16 (which does not know the setting) or edited by
-//      hand. The floor is read from that file so the two cannot drift.
-//
-// TWO MODES, because the two questions have different natural scopes
-//
-//   --base <ref>   The pull-request gate. Checks only what the change ADDS,
-//                  both questions. Versions already on the base branch were
-//                  checked when they landed, so re-asking spends a registry
-//                  round-trip to re-derive a known answer.
-//
-//   --all          The scheduled sweep. Checks the WHOLE lockfile, takedown
-//                  question only. This is the case the PR gate structurally
-//                  cannot see: a version that entered the lockfile weeks ago
-//                  and was pulled from the registry yesterday is added by no
-//                  pull request, so only a periodic full pass finds it. Age is
-//                  not re-asked here — every entry has by definition aged since
-//                  it merged, and re-flagging one would be noise.
+// Every failure to gather an input FAILS the gate rather than skipping it: an
+// unreadable lockfile, a missing `minimumReleaseAge`, an unreachable registry or
+// anything unexpected. A gate that reports green when it could not run is
+// indistinguishable from a satisfied invariant.
 //
 // TypeScript executed directly by Node's type stripping. The `.mts` extension
 // is deliberate: it makes the module system unambiguous instead of leaving it
@@ -42,10 +25,24 @@
 import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { pathToFileURL } from 'node:url'
 
-const LOCKFILE = 'pnpm-lock.yaml'
-const WORKSPACE_MANIFEST = 'pnpm-workspace.yaml'
+import type {
+  RegistryFact,
+  ResolvedPackage,
+  Violation,
+} from './check-lockfile-release-age.logic.mts'
+import {
+  addedResolvedVersions,
+  allResolvedVersions,
+  evaluatePackage,
+  formatMinutes,
+  formatViolations,
+  LOCKFILE,
+  parseCliArgs,
+  parseMinimumReleaseAge,
+  WORKSPACE_MANIFEST,
+} from './check-lockfile-release-age.logic.mts'
+
 const REGISTRY = 'https://registry.npmjs.org'
 
 /** How many packuments to have in flight at once. */
@@ -53,206 +50,6 @@ const CONCURRENCY = 8
 
 /** Per-request ceiling, so a hung socket fails fast instead of at job timeout. */
 const REQUEST_TIMEOUT_MS = 20_000
-
-/** One resolved dependency, as the lockfile names it. */
-export interface ResolvedPackage {
-  readonly name: string
-  readonly version: string
-}
-
-/** What the registry says about one resolved version. */
-export interface RegistryFact {
-  /** ISO-8601 publish timestamp, or `undefined` when the registry has none. */
-  readonly publishedAt: string | undefined
-  /** Whether the version is still listed in the packument's `versions` map. */
-  readonly stillPublished: boolean
-}
-
-/** Which question failed. Each maps to one branch of `evaluatePackage`. */
-export type ViolationCode =
-  'version-absent-from-registry' | 'version-too-fresh' | 'publish-date-unknown'
-
-export interface Violation {
-  readonly code: ViolationCode
-  readonly name: string
-  readonly version: string
-  readonly detail: string
-}
-
-// A lockfile entry in the `packages:` / `snapshots:` blocks sits at exactly two
-// spaces of indent, spelled `name@version:` or — when peers take part in the
-// resolution — `'name@version(peer@version)':`. Requiring that indent is what
-// keeps the `importers:` block, whose `version:` lines sit deeper, out of the
-// result.
-const LOCKFILE_ENTRY =
-  /^ {2}'?((?:@[^@'\s/]+\/)?[^@'\s/][^@'\s]*)@([0-9][^'():\s]*)'?(?:\(|:)/
-
-/**
- * Every `name@version` a pnpm lockfile resolves.
- *
- * A peer-suffixed snapshot key collapses onto the same identity as its
- * `packages:` entry, which is the intent: `foo@1.0.0(bar@2.0.0)` and `foo@1.0.0`
- * are one published tarball.
- */
-export function parseResolvedVersions(lockfileText: string): Set<string> {
-  const resolved = new Set<string>()
-
-  for (const line of lockfileText.split('\n')) {
-    const match = LOCKFILE_ENTRY.exec(line)
-    if (match !== null) {
-      resolved.add(`${match[1]}@${match[2]}`)
-    }
-  }
-
-  return resolved
-}
-
-/**
- * Splits a `name@version` key back into its parts, on the LAST separator so a
- * scoped name survives intact.
- */
-export function splitResolvedKey(key: string): ResolvedPackage {
-  const separator = key.lastIndexOf('@')
-
-  return { name: key.slice(0, separator), version: key.slice(separator + 1) }
-}
-
-/** Every entry a lockfile resolves, sorted for a stable report. */
-export function allResolvedVersions(lockfileText: string): ResolvedPackage[] {
-  return [...parseResolvedVersions(lockfileText)].sort().map(splitResolvedKey)
-}
-
-/**
- * The entries `headText` resolves that `baseText` did not. A removal is not a
- * finding: only an addition can introduce an artifact this repository did not
- * already trust.
- */
-export function addedResolvedVersions(
-  baseText: string,
-  headText: string,
-): ResolvedPackage[] {
-  const base = parseResolvedVersions(baseText)
-
-  return [...parseResolvedVersions(headText)]
-    .filter((key) => !base.has(key))
-    .sort()
-    .map(splitResolvedKey)
-}
-
-export interface EvaluateInput {
-  readonly pkg: ResolvedPackage
-  readonly fact: RegistryFact
-  /** Milliseconds since the epoch, injected so the spec can pin it. */
-  readonly now: number
-  /**
-   * The age floor to enforce, or `null` to ask the takedown question only —
-   * what the `--all` sweep passes, since every entry already on the branch has
-   * aged since it merged.
-   */
-  readonly minimumReleaseAgeMinutes: number | null
-}
-
-/**
- * The single-package decision. Returns `null` when the package is clean.
- *
- * Absence is answered first: a taken-down version is the more serious state,
- * and its publish date would otherwise describe something nobody can install.
- */
-export function evaluatePackage(input: EvaluateInput): Violation | null {
-  const { pkg, fact, now, minimumReleaseAgeMinutes } = input
-
-  if (!fact.stillPublished) {
-    return {
-      code: 'version-absent-from-registry',
-      name: pkg.name,
-      version: pkg.version,
-      detail:
-        'the registry no longer lists this version. A version that disappears ' +
-        'after being resolved is the signature of a takedown — treat it as ' +
-        'compromised until the registry or the maintainer says otherwise.',
-    }
-  }
-
-  if (minimumReleaseAgeMinutes === null) {
-    return null
-  }
-
-  if (fact.publishedAt === undefined) {
-    return {
-      code: 'publish-date-unknown',
-      name: pkg.name,
-      version: pkg.version,
-      detail:
-        'the registry reports no publish date, so the version’s age cannot be ' +
-        'established. This gate does not pass what it could not check.',
-    }
-  }
-
-  const publishedAtMs = Date.parse(fact.publishedAt)
-
-  if (Number.isNaN(publishedAtMs)) {
-    return {
-      code: 'publish-date-unknown',
-      name: pkg.name,
-      version: pkg.version,
-      detail: `the registry’s publish date (${fact.publishedAt}) is unparseable.`,
-    }
-  }
-
-  const ageMinutes = (now - publishedAtMs) / 60_000
-
-  if (ageMinutes < minimumReleaseAgeMinutes) {
-    return {
-      code: 'version-too-fresh',
-      name: pkg.name,
-      version: pkg.version,
-      detail:
-        `published ${formatMinutes(ageMinutes)} ago, under the ` +
-        `${formatMinutes(minimumReleaseAgeMinutes)} floor this repository sets ` +
-        `in ${WORKSPACE_MANIFEST}.`,
-    }
-  }
-
-  return null
-}
-
-/** Renders a minute count at the largest unit that stays readable. */
-export function formatMinutes(minutes: number): string {
-  const rounded = Math.max(0, Math.round(minutes))
-
-  if (rounded < 60) return `${rounded}min`
-  if (rounded < 1440) return `${(rounded / 60).toFixed(1)}h`
-
-  return `${(rounded / 1440).toFixed(1)}d`
-}
-
-/**
- * The `minimumReleaseAge` this repository declares, read from the text of
- * `pnpm-workspace.yaml` so the gate and pnpm share one floor.
- *
- * Returns `null` when the key is absent; the caller decides what that means,
- * because a gate with no floor to enforce is a configuration failure rather
- * than a clean tree.
- */
-export function parseMinimumReleaseAge(workspaceText: string): number | null {
-  for (const line of workspaceText.split('\n')) {
-    const match = /^minimumReleaseAge:\s*(\d+)\s*(?:#.*)?$/.exec(line)
-    if (match !== null) {
-      return Number(match[1])
-    }
-  }
-
-  return null
-}
-
-/** One line per violation, in the shape `main` prints. */
-export function formatViolations(violations: readonly Violation[]): string {
-  return violations
-    .map((v) => `  [${v.code}] ${v.name}@${v.version} — ${v.detail}`)
-    .join('\n')
-}
-
-// ── I/O half ─────────────────────────────────────────────────────────────────
 
 function fail(message: string): never {
   console.error(`::error::${message}`)
@@ -301,15 +98,11 @@ function readRepoFile(repoRoot: string, relativePath: string): string {
 }
 
 async function main(): Promise<void> {
-  const argv = process.argv.slice(2)
-  const verbose = argv.includes('--verbose')
-  const sweepAll = argv.includes('--all')
-  const baseIndex = argv.indexOf('--base')
-  const baseRef = baseIndex === -1 ? 'origin/main' : (argv[baseIndex + 1] ?? '')
-
-  if (sweepAll && baseIndex !== -1) {
-    fail('`--all` and `--base` are different scopes; pass one or the other.')
+  const parsed = parseCliArgs(process.argv.slice(2))
+  if (!parsed.ok) {
+    fail(parsed.error)
   }
+  const { options } = parsed
 
   const repoRoot = execFileSync('git', ['rev-parse', '--show-toplevel'], {
     encoding: 'utf8',
@@ -330,26 +123,28 @@ async function main(): Promise<void> {
     )
   }
 
-  // The sweep asks the takedown question only — see the header.
-  const minimumReleaseAgeMinutes = sweepAll ? null : declaredFloor
+  // The sweep asks the takedown question only — see the pure half.
+  const minimumReleaseAgeMinutes =
+    options.mode === 'sweep' ? null : declaredFloor
 
   let subjects: ResolvedPackage[]
   let scopeLabel: string
 
-  if (sweepAll) {
+  if (options.mode === 'sweep') {
     subjects = allResolvedVersions(headText)
     scopeLabel = `all ${String(subjects.length)} resolved version(s), takedown check only`
   } else {
     let baseText: string
 
     try {
-      baseText = execFileSync('git', ['show', `${baseRef}:${LOCKFILE}`], {
-        encoding: 'utf8',
-        maxBuffer: 64 * 1024 * 1024,
-      })
+      baseText = execFileSync(
+        'git',
+        ['show', `${options.baseRef}:${LOCKFILE}`],
+        { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 },
+      )
     } catch {
       fail(
-        `Could not read ${LOCKFILE} at ${baseRef}. Fetch the base ref ` +
+        `Could not read ${LOCKFILE} at ${options.baseRef}. Fetch the base ref ` +
           '(`git fetch origin main`) or pass `--base <ref>` naming a ref this ' +
           'clone has.',
       )
@@ -361,7 +156,9 @@ async function main(): Promise<void> {
       `floor ${formatMinutes(declaredFloor)}`
 
     if (subjects.length === 0) {
-      console.log(`OK — ${LOCKFILE} resolves nothing that ${baseRef} did not.`)
+      console.log(
+        `OK — ${LOCKFILE} resolves nothing that ${options.baseRef} did not.`,
+      )
 
       return
     }
@@ -405,7 +202,7 @@ async function main(): Promise<void> {
           stillPublished: false,
         }
 
-        if (verbose) {
+        if (options.verbose) {
           console.log(
             `  ${pkg.name}@${pkg.version} published=${fact.publishedAt ?? 'unknown'} ` +
               `stillPublished=${String(fact.stillPublished)}`,
@@ -428,8 +225,6 @@ async function main(): Promise<void> {
     Array.from({ length: Math.min(CONCURRENCY, names.length) }, worker),
   )
 
-  // A gate that reports green when it could not run is the "looks guarded"
-  // state, and it is indistinguishable from a satisfied invariant.
   if (unreachable.length > 0) {
     fail(
       `Could not reach the registry for ${String(unreachable.length)} ` +
@@ -454,15 +249,13 @@ async function main(): Promise<void> {
   console.log(`OK — ${scopeLabel}: nothing to report.`)
 }
 
-// Run only when this module IS the entry point. The spec imports it for its
-// pure helpers, and a module that executes on import would run the whole gate —
-// including its `process.exit(1)` paths — inside the test runner. That is not
-// hypothetical: without this guard the suite dies on any checkout where
-// `git show origin/main:pnpm-lock.yaml` cannot resolve, which is every
-// shallow CI checkout.
-if (
-  process.argv[1] !== undefined &&
-  import.meta.url === pathToFileURL(process.argv[1]).href
-) {
-  await main()
-}
+// The spec imports only the pure half, so this module is never loaded by the
+// test runner and can run unconditionally. Any unexpected throw (a `git` that
+// cannot run, a bug) still fails the gate, with a CI annotation instead of a
+// bare stack trace.
+main().catch((error: unknown) => {
+  fail(
+    'Lockfile release-age gate failed unexpectedly: ' +
+      (error instanceof Error ? error.message : String(error)),
+  )
+})

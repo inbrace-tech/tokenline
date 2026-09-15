@@ -11,6 +11,11 @@
 // format change would leave every fixture case green while the gate parsed an
 // empty set and reported a clean delta forever.
 //
+// It imports only the pure half (`.logic.mts`). The entry point runs `main()` —
+// git, the registry, `process.exit` — the moment it is loaded, so keeping it out
+// of the test runner is a property of the file layout rather than of a runtime
+// guard that can be forgotten.
+//
 // Imports the vitest globals explicitly rather than relying on `globals: true`,
 // since this file is type-checked by `scripts/tsconfig.json`, which does not
 // pull in `vitest/globals`.
@@ -25,13 +30,15 @@ import { describe, expect, it } from 'vitest'
 import {
   addedResolvedVersions,
   allResolvedVersions,
+  DEFAULT_BASE_REF,
   evaluatePackage,
   formatMinutes,
   formatViolations,
+  parseCliArgs,
   parseMinimumReleaseAge,
   parseResolvedVersions,
   splitResolvedKey,
-} from './check-lockfile-release-age.mts'
+} from './check-lockfile-release-age.logic.mts'
 
 const BASE_LOCKFILE = [
   'lockfileVersion: 9.0',
@@ -64,6 +71,59 @@ const HEAD_LOCKFILE = BASE_LOCKFILE.replace(/example@1\.0\.0/g, 'example@1.0.1')
 
 const FLOOR_MINUTES = 4320
 const NOW = Date.parse('2026-08-20T12:00:00.000Z')
+
+describe('parseCliArgs', () => {
+  it('defaults to the delta mode against origin/main', () => {
+    expect(parseCliArgs([])).toEqual({
+      ok: true,
+      options: { mode: 'delta', baseRef: DEFAULT_BASE_REF, verbose: false },
+    })
+  })
+
+  it('reads --base and --verbose in either order', () => {
+    const expected = {
+      ok: true,
+      options: { mode: 'delta', baseRef: 'abc123', verbose: true },
+    }
+
+    expect(parseCliArgs(['--base', 'abc123', '--verbose'])).toEqual(expected)
+    expect(parseCliArgs(['--verbose', '--base', 'abc123'])).toEqual(expected)
+  })
+
+  it('selects the sweep mode with --all', () => {
+    expect(parseCliArgs(['--all'])).toEqual({
+      ok: true,
+      options: { mode: 'sweep', verbose: false },
+    })
+  })
+
+  it('should-catch: --all together with --base', () => {
+    expect(parseCliArgs(['--all', '--base', 'abc123']).ok).toBe(false)
+  })
+
+  it('should-catch: --base with no value', () => {
+    // As the last argument, `--base` used to become an empty ref, and
+    // `git show :pnpm-lock.yaml` reads the index — the head itself — so the
+    // gate reported "nothing added" on every PR.
+    expect(parseCliArgs(['--base']).ok).toBe(false)
+  })
+
+  it('should-catch: --base with an empty value', () => {
+    // What `--base "${BASE_SHA}"` becomes if the workflow ever loses the SHA.
+    expect(parseCliArgs(['--base', '']).ok).toBe(false)
+    expect(parseCliArgs(['--base', '  ']).ok).toBe(false)
+  })
+
+  it('should-catch: --base swallowing the next flag', () => {
+    expect(parseCliArgs(['--base', '--verbose']).ok).toBe(false)
+  })
+
+  it('should-catch: an unknown argument instead of falling back to delta', () => {
+    // A typo of `--all` in the scheduled sweep must not quietly become a delta
+    // run that checks nothing.
+    expect(parseCliArgs(['--al']).ok).toBe(false)
+  })
+})
 
 describe('parseResolvedVersions', () => {
   it('reads a plain entry and a scoped entry from the packages block', () => {
