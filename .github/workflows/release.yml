@@ -32,6 +32,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
+      # The one checkout that keeps its credentials: changesets/action pushes the
+      # "chore: version packages" branch with them. Every other workflow sets
+      # persist-credentials: false.
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       # Setup node + pnpm + install (Node from .nvmrc, pnpm from package.json)

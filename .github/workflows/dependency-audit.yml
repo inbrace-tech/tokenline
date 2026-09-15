@@ -51,6 +51,8 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
+          # Never pushes, so the token must not outlive the checkout step.
+          persist-credentials: false
 
       # Node only — no pnpm, no install. The gate reads two lockfile texts and
       # talks to the registry over `fetch`; it imports nothing from the tree.

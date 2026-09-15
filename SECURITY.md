@@ -49,6 +49,9 @@ Worth stating plainly, because it bounds what a vulnerability here can reach:
   to the exact workflow run that built it, verifiable with `npm audit signatures`.
 - **Every GitHub Action is pinned to a full commit SHA**, so a compromised or
   retagged action version cannot silently enter a workflow run.
+- **Workflow checkouts drop their credentials** (`persist-credentials: false`), so
+  the job token is not left in `.git/config` for a later step to read. The
+  release job is the one exception, because it pushes the version branch.
 - **Dependency installs run with a frozen lockfile**, and install-time lifecycle
   scripts are blocked for every dependency except an explicit allow-list in
   `pnpm-workspace.yaml`.

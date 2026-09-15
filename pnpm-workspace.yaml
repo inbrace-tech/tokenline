@@ -18,9 +18,16 @@ allowBuilds:
 # automated bump and a maintainer running `pnpm add` sit behind the same floor.
 #
 # Enforcement on a PR is NOT this key — it steers resolution on the machine that
-# runs it. `scripts/check-lockfile-release-age.mjs` re-checks the versions a PR
+# runs it. `scripts/check-lockfile-release-age.mts` re-checks the versions a PR
 # adds against the registry, reading the number from this line.
 minimumReleaseAge: 4320
+
+# What happens when NO version satisfies the floor. `false` = fall back to the
+# newest version that does, rather than failing the install. Strict mode needs
+# each exception approved and persisted to this file, which Dependabot cannot
+# do (it resolves without saving), so strict would break its update PRs. The
+# floor itself is unaffected: a too-fresh version is still never resolved.
+minimumReleaseAgeStrict: false
 
 # Targeted overrides for advisories in the dev toolchain's transitive graph.
 # Each key is a version RANGE, so only the vulnerable versions are redirected
@@ -34,8 +41,10 @@ minimumReleaseAge: 4320
 overrides:
   # DoS via unbounded expansion (CVE-2026-14257 and its follow-up bypass).
   'brace-expansion@>=4.0.0 <5.0.9': '^5.0.9'
-  # Quadratic CPU consumption resolving `!!omap` (CVE-2026-59870).
-  'js-yaml@>=3.0.0 <3.15.1': '^3.15.1'
-  'js-yaml@>=4.0.0 <4.3.1': '^4.3.1'
+  # Quadratic CPU consumption resolving `!!omap` (CVE-2026-59870), and
+  # `maxTotalMergeKeys` not bounding CPU on empty merge sources
+  # (GHSA-2883-xcg3-v3hh), fixed in 3.15.2 / 4.3.2.
+  'js-yaml@>=3.0.0 <3.15.2': '^3.15.2'
+  'js-yaml@>=4.0.0 <4.3.2': '^4.3.2'
   # Custom generators can loop indefinitely when size is zero.
   'nanoid@<3.3.18': '^3.3.18'

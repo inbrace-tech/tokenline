@@ -18,6 +18,12 @@ updates:
       time: "06:00"
       timezone: America/Sao_Paulo
     open-pull-requests-limit: 5
+    # Same quarantine as the npm block below, for the actions a workflow runs
+    # with this repository's token. github-actions only supports `default-days`
+    # (the per-semver keys are npm-style and are ignored here), so one figure:
+    # 7 days, the npm minor window. Security updates still bypass it.
+    cooldown:
+      default-days: 7
     groups:
       all-actions:
         patterns:
