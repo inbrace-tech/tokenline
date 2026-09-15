@@ -95,7 +95,8 @@ parse_and_prepare_paths() {
     (.context_window.current_usage.input_tokens // 0),
     (.context_window.current_usage.output_tokens // 0),
     (.context_window.current_usage.cache_creation_input_tokens // 0),
-    (.context_window.current_usage.cache_read_input_tokens // 0)' 2>/dev/null)
+    (.context_window.current_usage.cache_read_input_tokens // 0),
+    (.model.id // "")' 2>/dev/null)
 
   # Malformed or empty stdin: jq emits nothing, so the array is empty. Degrade to
   # a silent no-op render rather than leaking parse errors or rendering garbage —
@@ -115,6 +116,7 @@ parse_and_prepare_paths() {
   cur_output="${_f[10]}"
   cur_cwrite="${_f[11]}"
   cur_cread="${_f[12]}"
+  model_id="${_f[13]}"
 
   # Computed: total input-only tokens used in the current context window
   tokens_used=$((cur_input + cur_cwrite + cur_cread))
@@ -139,6 +141,15 @@ parse_and_prepare_paths() {
   is_gemini=false
   if [[ "$model" =~ [Gg]emini ]]; then
     is_gemini=true
+  fi
+
+  # Claude Fable 5.1 and Mythos 5.1 bill cache hits at 0.025x base input instead of
+  # the standard 0.1x. Match the API id (claude-fable-5-1[1m]) or the display name
+  # (Fable 5.1) so either field alone is enough.
+  discounted_cache_read=false
+  local discounted_re='(fable|mythos)[- ]5[-.]1([^0-9]|$)'
+  if [[ "${model_id,,}" =~ $discounted_re ]] || [[ "${model,,}" =~ $discounted_re ]]; then
+    discounted_cache_read=true
   fi
 
   # Get the current epoch timestamp once to be reused across all calculations
@@ -402,6 +413,7 @@ compute_turn_breakdown() {
       output_mult="4"
     else
       read_mult="0.1"
+      [ "$discounted_cache_read" = true ] && read_mult="0.025"
       write_mult="1.25"
       [ "${ttl_label:-5m}" = "1h" ] && write_mult="2"
       input_mult="1"
