@@ -30,7 +30,7 @@ jobs:
       # persist-credentials: false on every checkout that never pushes: otherwise
       # the job's GITHUB_TOKEN sits in .git/config for any later step (including
       # an allow-listed dependency build script) to read.
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       # scandir "." finds every *.sh in the repo (tokenline.sh, install.sh).
@@ -49,7 +49,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       # Setup node + pnpm + install (Node from .nvmrc, pnpm from package.json)
@@ -98,7 +98,7 @@ jobs:
     steps:
       # Checkout provides package.json at the repo root; dist/cli.js reads its
       # version from ../package.json, so the layout must match the published one.
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Download built CLI
