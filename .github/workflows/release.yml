@@ -32,13 +32,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      # No persisted credentials here either. changesets/action does not reuse
-      # the checkout's token: it writes its own ~/.netrc from GITHUB_TOKEN
-      # ("setting GitHub credentials" in its log) and pushes the version branch
-      # and the release tag through that. Dropping the checkout's copy keeps the
-      # token out of .git/config while `pnpm install` runs dependency build
-      # scripts in the step below.
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      # No persisted credentials here either. changesets/action never reuses the
+      # checkout's token for its pushes: v1 writes its own ~/.netrc from
+      # GITHUB_TOKEN, and v2 pushes through the GitHub API (or, with
+      # push-with-git-cli, a command-scoped auth header). Dropping the checkout's
+      # copy keeps the token out of .git/config while `pnpm install` runs
+      # dependency build scripts in the step below.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -47,7 +47,7 @@ jobs:
 
       - name: Create Release Pull Request or Publish
         id: changesets
-        uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0
+        uses: changesets/action@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
         with:
           # This triggers the "release" script we added to package.json
           publish: pnpm run release
