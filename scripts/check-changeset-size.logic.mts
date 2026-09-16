@@ -12,10 +12,10 @@
 // -----------------------------------
 // A changeset is written at the end of a piece of work by whoever holds the
 // whole reasoning, which is exactly when writing all of it down feels right.
-// The convention alone fails under the conditions it exists for: the sibling
-// repository inbrace-tech/inbrace-ai-harness followed it in none of its first
-// 166 entries, and a release there produced a 149,009-character body that
-// GitHub rejected against its 125,000-character cap after the tag was pushed.
+// The convention alone fails under the conditions it exists for: this file's
+// own entries had already grown into paragraphs. Left unchecked, a Release body
+// can pass GitHub's 125,000-character cap, and that rejection only arrives
+// after the tag is pushed.
 //
 // It gates nothing but `.changeset/*.md`. Pull request bodies, commit messages
 // and issues have no ceiling.
