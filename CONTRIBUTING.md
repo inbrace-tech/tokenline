@@ -51,10 +51,20 @@ v1 targets Linux / WSL2. macOS and Windows are tracked as roadmap issues — if 
 adding BSD `date`/`stat` compatibility, please coordinate on the relevant issue so the
 abstraction stays clean.
 
+## Changesets
+
+A change that users of the package receive ships with a changeset (`pnpm changeset`).
+**Its summary is one line** saying what changed for a user, such as
+`fix: show the rate-limit reset ETA again`. It becomes one bullet of `CHANGELOG.md` and
+of the GitHub Release, rendered with a link to your pull request. Put the reasoning and
+the testing notes in the pull request body instead. `pnpm changeset:check` enforces the
+line: at most 200 characters, no line breaks. CI runs it on every PR.
+
 ## Opening a PR
 
 1. Fork and branch from `main`.
 2. Make your change, keep it ShellCheck-clean.
-3. Describe what changed and how you tested it.
+3. Add a one-line changeset if users receive the change.
+4. Describe what changed and how you tested it.
 
 PRs are reviewed and merged by the maintainers — thank you for contributing!

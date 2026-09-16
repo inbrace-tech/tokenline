@@ -4,49 +4,46 @@
 
 ### Patch Changes
 
-- 2174bb7: fix: show the rate-limit reset ETA and pace markers again. Claude Code sends `rate_limits.*.resets_at` as Unix epoch seconds, but since 1.2.1 `tokenline.sh` passed the value to `date` as if it were ISO-8601. GNU and BSD `date` both reject a bare epoch, so the ETA and the `!` / `!!` markers disappeared. An integer `resets_at` is now used directly, and anything else still goes through the ISO-8601 parser.
+- fix: show the rate-limit reset ETA and pace markers again (`resets_at` is read as epoch seconds) ([#95](https://github.com/inbrace-tech/tokenline/pull/95) by [@ropdias](https://github.com/ropdias))
 
 ## 1.2.2
 
 ### Patch Changes
 
-- b3730ec: fix: bill cache reads at 0.025x on Claude Fable 5.1 / Mythos 5.1. The per-turn economics line used a flat 0.1x cache-read multiplier for every Claude model, overstating `eq` and understating `saving %` on the models with the discounted cache-hit price. `tokenline.sh` now reads `model.id` and picks 0.025x for Fable 5.1 / Mythos 5.1; every other model keeps 0.1x.
+- fix: bill cache reads at 0.025x on Claude Fable 5.1 / Mythos 5.1; other models keep 0.1x ([#75](https://github.com/inbrace-tech/tokenline/pull/75) by [@ropdias](https://github.com/ropdias))
 
 ## 1.2.1
 
 ### Patch Changes
 
-- 60ba6a6: Add `--antigravity` flag to installer CLI to target Antigravity CLI global settings (`~/.gemini/antigravity-cli/settings.json`).
+- feat: add `--antigravity` to install into the Antigravity CLI global settings ([#61](https://github.com/inbrace-tech/tokenline/pull/61) by [@ropdias](https://github.com/ropdias))
 
 ## 1.2.0
 
 ### Minor Changes
 
-- 5e7274b: Add macOS support. `tokenline.sh` now abstracts `date`/`stat` over GNU vs BSD by
-  probing behavior once (`epoch_from_iso`, `file_mtime`), pins `LC_ALL=C` so a
-  comma-decimal locale renders identically, and the installer accepts macOS
-  (`brew install bash jq`). Closes #2.
+- feat: add macOS support (BSD `date`/`stat`, locale-safe rendering) ([#23](https://github.com/inbrace-tech/tokenline/pull/23) by [@xinnaider](https://github.com/xinnaider))
 
 ## 1.1.2
 
 ### Patch Changes
 
-- 6e77d23: docs: update README to clarify tokenline features and real-time cost tracking
+- docs: clarify the tokenline features and real-time cost tracking in the README ([#20](https://github.com/inbrace-tech/tokenline/pull/20) by [@ropdias](https://github.com/ropdias))
 
 ## 1.1.1
 
 ### Patch Changes
 
-- 9351972: fix(docs): update installer README text to reflect local-first default and --global flag
+- docs: fix the installer paths and the `--global` flag in the README ([#18](https://github.com/inbrace-tech/tokenline/pull/18) by [@ropdias](https://github.com/ropdias))
 
 ## 1.1.0
 
 ### Minor Changes
 
-- ab63142: Changed default installation to local project (.claude), added --global flag, and revamped README with quick start onboarding and Prompt Caching guide.
+- feat: install into the local project (`.claude`) by default; add `--global` ([#16](https://github.com/inbrace-tech/tokenline/pull/16) by [@ropdias](https://github.com/ropdias))
 
 ## 1.0.1
 
 ### Patch Changes
 
-- 0d349ac: Fix CLI parser to collect and report all unknown options instead of just the last one.
+- fix: report every unknown CLI option, not just the last one ([#14](https://github.com/inbrace-tech/tokenline/pull/14) by [@ropdias](https://github.com/ropdias))

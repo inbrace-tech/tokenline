@@ -47,6 +47,22 @@ Runs on Linux / WSL2 and macOS. `date`/`stat` are abstracted over GNU vs BSD by
 probing behavior once (`epoch_from_iso`, `file_mtime` in `tokenline.sh`); `mapfile`
 still needs bash 4+, so macOS users `brew install bash`. Windows is a roadmap issue.
 
+## Changesets
+
+A user-facing change ships with a changeset, and **its summary is one line** —
+what a user receives, at most 200 characters, no line breaks. It becomes one bullet
+of `CHANGELOG.md` and of the GitHub Release, rendered by
+`@changesets/changelog-github` with a link to the pull request. Put the reasoning
+and the testing notes in the pull request body instead. `pnpm changeset:check`
+enforces it, and CI runs it.
+
+The line reads `- summary (#PR by @author)`, set by the `template` option in
+`.changeset/config.json`. That option is experimental upstream, so
+`@changesets/changelog-github` is pinned to an exact version: Dependabot still
+proposes each release, and before merging that PR, read the plugin's release
+notes for template changes. CI does not run `changeset version`, so nothing
+automated catches one.
+
 ## The npm installer
 
 `src/cli.ts` is the installer CLI, authored in TypeScript and built with `tsc`

@@ -64,6 +64,10 @@ jobs:
             exit 1
           fi
       - run: pnpm typecheck
+      # Every pending changeset summary is one line: it becomes one bullet of
+      # CHANGELOG.md and of the GitHub Release body, and the reasoning belongs in
+      # the pull request it links to (scripts/check-changeset-size.logic.mts).
+      - run: pnpm changeset:check
       - run: pnpm test
       - run: pnpm build
       # Hand the built CLI to cli-compat so it runs the *exact* published
