@@ -59,7 +59,9 @@ enforces it, and CI runs it.
 The line reads `- summary (#PR by @author)`, set by the `template` option in
 `.changeset/config.json`. That option is experimental upstream, so
 `@changesets/changelog-github` is pinned to an exact version: Dependabot still
-proposes each release, and its PR is where a changed token syntax gets caught.
+proposes each release, and before merging that PR, read the plugin's release
+notes for template changes. CI does not run `changeset version`, so nothing
+automated catches one.
 
 ## The npm installer
 
