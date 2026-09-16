@@ -58,7 +58,7 @@ A change that users of the package receive ships with a changeset (`pnpm changes
 `fix: show the rate-limit reset ETA again`. It becomes one bullet of `CHANGELOG.md` and
 of the GitHub Release, rendered with a link to your pull request. Put the reasoning and
 the testing notes in the pull request body instead. `pnpm changeset:check` enforces the
-line: at most 200 characters, one paragraph. CI runs it on every PR.
+line: at most 200 characters, no line breaks. CI runs it on every PR.
 
 ## Opening a PR
 

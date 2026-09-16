@@ -32,7 +32,7 @@ export type ChangesetFile = {
 }
 
 export type ChangesetViolationKind =
-  'summary-too-long' | 'summary-multi-paragraph' | 'no-summary'
+  'summary-too-long' | 'summary-multi-line' | 'no-summary'
 
 export type ChangesetViolation = {
   readonly path: string
@@ -67,6 +67,19 @@ export function summaryOf(source: string): string {
   return afterFence === -1 ? '' : withoutBom.slice(afterFence + 1).trim()
 }
 
+/**
+ * The summary as `@changesets/changelog-github` renders it: without the
+ * `pr:`, `commit:` and `author:` override lines it reads and strips (same
+ * patterns as its `getReleaseLine`). Those lines are metadata, not prose.
+ */
+export function renderedSummaryOf(source: string): string {
+  return summaryOf(source)
+    .replace(/^\s*(?:pr|pull|pull\s+request):\s*#?(\d+)/im, '')
+    .replace(/^\s*commit:\s*([^\s]+)/im, '')
+    .replace(/^\s*(?:author|user):\s*@?([^\s]+)/gim, '')
+    .trim()
+}
+
 /** `README.md` is changesets' own documentation and carries no frontmatter. */
 export function isChangeset(path: string): boolean {
   return (
@@ -83,7 +96,7 @@ export function scanChangesets(
   let longest = 0
 
   for (const file of files) {
-    const summary = summaryOf(file.source)
+    const summary = renderedSummaryOf(file.source)
     longest = Math.max(longest, summary.length)
 
     if (summary === '') {
@@ -97,15 +110,16 @@ export function scanChangesets(
       continue
     }
 
-    // A blank line inside the summary means a second paragraph, which is a
-    // stronger signal than length alone: a one-line summary cannot have one.
-    if (/\n[ \t]*\n/.test(summary)) {
+    // The renderer turns the first line into the bullet and indents every
+    // further line beneath it, so a hard-wrapped summary is prose even when it
+    // fits the ceiling and has no blank line.
+    if (summary.includes('\n')) {
       violations.push({
         path: file.path,
-        kind: 'summary-multi-paragraph',
+        kind: 'summary-multi-line',
         length: summary.length,
         message:
-          'keep the summary to a single paragraph — the reasoning goes in the pull request, ' +
+          'keep the summary to a single line — the reasoning goes in the pull request, ' +
           'which the changelog line links to',
       })
       continue

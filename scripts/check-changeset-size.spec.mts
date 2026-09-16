@@ -15,6 +15,7 @@ import {
   formatChangesetViolations,
   isChangeset,
   MAX_SUMMARY_CHARS,
+  renderedSummaryOf,
   scanChangesets,
   summaryOf,
 } from './check-changeset-size.logic.mts'
@@ -36,6 +37,16 @@ describe('summaryOf', () => {
 
   it('strips a byte-order mark before reading the fence', () => {
     expect(summaryOf(`\uFEFF${frontmatter}fix: a line`)).toBe('fix: a line')
+  })
+})
+
+describe('renderedSummaryOf', () => {
+  it('drops the pr/commit/author override lines changelog-github strips', () => {
+    expect(
+      renderedSummaryOf(
+        `${frontmatter}pr: #98\ncommit: abc1234\nauthor: @ropdias\nfix: a line`,
+      ),
+    ).toBe('fix: a line')
   })
 })
 
@@ -81,9 +92,21 @@ describe('scanChangesets', () => {
       changeset('fix: a line\n\nAnd the reasoning.'),
     ])
 
-    expect(result.violations.map((v) => v.kind)).toEqual([
-      'summary-multi-paragraph',
+    expect(result.violations.map((v) => v.kind)).toEqual(['summary-multi-line'])
+  })
+
+  it('should catch a short summary hard-wrapped onto a second line', () => {
+    const result = scanChangesets([changeset('fix: a line\nwrapped here')])
+
+    expect(result.violations.map((v) => v.kind)).toEqual(['summary-multi-line'])
+  })
+
+  it('passes a one-line summary preceded by override lines', () => {
+    const result = scanChangesets([
+      changeset('pr: #98\nauthor: @ropdias\nfix: a line'),
     ])
+
+    expect(result.violations).toEqual([])
   })
 
   it('should catch a changeset with no summary', () => {

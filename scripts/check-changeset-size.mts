@@ -4,7 +4,7 @@
 //   node --experimental-strip-types scripts/check-changeset-size.mts [--verbose]
 //
 // Fails a pending `.changeset/*.md` whose summary is missing, runs past
-// `MAX_SUMMARY_CHARS`, or carries a second paragraph. Why the summary is one
+// `MAX_SUMMARY_CHARS`, or spans more than one line. Why the summary is one
 // line is written up in the pure half, `check-changeset-size.logic.mts`.
 //
 // There is deliberately no "found nothing" guard: between releases, and on most
@@ -56,7 +56,7 @@ if (result.violations.length > 0) {
   console.error(
     '\nA changeset summary becomes one line of CHANGELOG.md and one line of the GitHub Release ' +
       'body. Put the reasoning in the pull request; the changelog line links to it. ' +
-      `Ceiling: ${MAX_SUMMARY_CHARS} characters, one paragraph.`,
+      `Ceiling: ${MAX_SUMMARY_CHARS} characters, one line.`,
   )
   process.exit(1)
 }

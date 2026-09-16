@@ -50,7 +50,7 @@ still needs bash 4+, so macOS users `brew install bash`. Windows is a roadmap is
 ## Changesets
 
 A user-facing change ships with a changeset, and **its summary is one line** —
-what a user receives, at most 200 characters, one paragraph. It becomes one bullet
+what a user receives, at most 200 characters, no line breaks. It becomes one bullet
 of `CHANGELOG.md` and of the GitHub Release, rendered by
 `@changesets/changelog-github` with a link to the pull request. Put the reasoning
 and the testing notes in the pull request body instead. `pnpm changeset:check`
