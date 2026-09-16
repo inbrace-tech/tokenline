@@ -1,7 +1,24 @@
 //! Formatting helpers, byte-for-byte parity with `tokenline.sh`.
 //!
-//! This slice carries `fmt_k` / `fmt_eta`; the 256-color palette and the
-//! ISO-8601 → epoch parser land in the next two slices.
+//! Carries `fmt_k` / `fmt_eta` and the 256-color palette; the ISO-8601 → epoch
+//! parser lands in the next slice.
+
+/// 256-color SGR sequences, byte-identical to `tokenline.sh`'s `COLOR_*` /
+/// `STYLE_*` constants (`tokenline.sh:21-30`). Byte parity matters: the golden
+/// oracle diffs the raw escape sequences, so `RESET` is `[00m` (two digits),
+/// not `[0m`, exactly as the bash emits.
+pub mod color {
+    pub const GRAY: &str = "\x1b[38;5;244m";
+    pub const DARK_GRAY: &str = "\x1b[38;5;240m";
+    pub const CYAN: &str = "\x1b[38;5;51m";
+    pub const YELLOW: &str = "\x1b[38;5;226m";
+    pub const MAGENTA: &str = "\x1b[38;5;201m";
+    pub const ORANGE: &str = "\x1b[38;5;208m";
+    pub const RED: &str = "\x1b[38;5;196m";
+    pub const GREEN: &str = "\x1b[38;5;46m";
+    pub const RESET: &str = "\x1b[00m";
+    pub const BLINK: &str = "\x1b[1;5m";
+}
 
 /// Compact token count, mirroring the bash `fmt_k` (awk `%.1f`):
 /// `1_500_000 -> "1.5M"`, `25_600 -> "25.6k"`, `900 -> "900"`.
@@ -56,6 +73,22 @@ mod tests {
         assert_eq!(fmt_k(86_600), "86.6k");
         assert_eq!(fmt_k(1_000_000), "1.0M");
         assert_eq!(fmt_k(1_500_000), "1.5M");
+    }
+
+    #[test]
+    fn palette_matches_bash_bytes() {
+        // Exact bytes captured from `tokenline.sh` output (cat -v): ESC[38;5;Nm.
+        assert_eq!(color::GRAY, "\x1b[38;5;244m");
+        assert_eq!(color::CYAN, "\x1b[38;5;51m");
+        assert_eq!(color::YELLOW, "\x1b[38;5;226m");
+        assert_eq!(color::MAGENTA, "\x1b[38;5;201m");
+        assert_eq!(color::ORANGE, "\x1b[38;5;208m");
+        assert_eq!(color::GREEN, "\x1b[38;5;46m");
+        assert_eq!(color::RED, "\x1b[38;5;196m");
+        assert_eq!(color::DARK_GRAY, "\x1b[38;5;240m");
+        // bash COLOR_RESET is [00m (two digits), STYLE_BLINK is [1;5m.
+        assert_eq!(color::RESET, "\x1b[00m");
+        assert_eq!(color::BLINK, "\x1b[1;5m");
     }
 
     #[test]
