@@ -56,6 +56,11 @@ of `CHANGELOG.md` and of the GitHub Release, rendered by
 and the testing notes in the pull request body instead. `pnpm changeset:check`
 enforces it, and CI runs it.
 
+The line reads `- summary (#PR by @author)`, set by the `template` option in
+`.changeset/config.json`. That option is experimental upstream, so
+`@changesets/changelog-github` is pinned to an exact version: Dependabot still
+proposes each release, and its PR is where a changed token syntax gets caught.
+
 ## The npm installer
 
 `src/cli.ts` is the installer CLI, authored in TypeScript and built with `tsc`

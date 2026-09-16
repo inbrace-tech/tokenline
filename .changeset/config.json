@@ -3,7 +3,8 @@
   "changelog": [
     "@changesets/changelog-github",
     {
-      "repo": "inbrace-tech/tokenline"
+      "repo": "inbrace-tech/tokenline",
+      "template": "\n\n- {summary} ({pull} by {authors})"
     }
   ],
   "commit": false,
