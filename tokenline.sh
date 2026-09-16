@@ -56,6 +56,19 @@ epoch_from_iso() {
   fi
 }
 
+epoch_from_reset() {
+  # rate_limits.*.resets_at -> epoch seconds; empty on failure.
+  # Claude Code sends Unix epoch seconds, which `date` cannot parse as a date
+  # (GNU needs '@<n>', BSD needs '-r <n>'), so an integer is taken as-is and
+  # never reaches `date`. Anything else is tried as ISO-8601.
+  local value="$1"
+  if [[ "$value" =~ ^[0-9]+$ ]]; then
+    printf '%s' "$value"
+  elif [ -n "$value" ]; then
+    epoch_from_iso "$value"
+  fi
+}
+
 file_mtime() {
   local f="$1"
   if [ "$_stat_gnu" -eq 1 ]; then
@@ -109,9 +122,9 @@ parse_and_prepare_paths() {
   transcript_path="${_f[3]}"
   session_id="${_f[4]}"
   rl_5h_pct="${_f[5]}"
-  rl_5h_reset=$(epoch_from_iso "${_f[6]}")
+  rl_5h_reset=$(epoch_from_reset "${_f[6]}")
   rl_7d_pct="${_f[7]}"
-  rl_7d_reset=$(epoch_from_iso "${_f[8]}")
+  rl_7d_reset=$(epoch_from_reset "${_f[8]}")
   cur_input="${_f[9]}"
   cur_output="${_f[10]}"
   cur_cwrite="${_f[11]}"
