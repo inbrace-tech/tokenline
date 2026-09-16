@@ -4,49 +4,46 @@
 
 ### Patch Changes
 
-- 2174bb7: fix: show the rate-limit reset ETA and pace markers again. Claude Code sends `rate_limits.*.resets_at` as Unix epoch seconds, but since 1.2.1 `tokenline.sh` passed the value to `date` as if it were ISO-8601. GNU and BSD `date` both reject a bare epoch, so the ETA and the `!` / `!!` markers disappeared. An integer `resets_at` is now used directly, and anything else still goes through the ISO-8601 parser.
+- [#95](https://github.com/inbrace-tech/tokenline/pull/95) [`2174bb7`](https://github.com/inbrace-tech/tokenline/commit/2174bb7c62c7a9ebfce80f7b98b648763507c36d) Thanks [@ropdias](https://github.com/ropdias)! - fix: show the rate-limit reset ETA and pace markers again (`resets_at` is read as epoch seconds)
 
 ## 1.2.2
 
 ### Patch Changes
 
-- b3730ec: fix: bill cache reads at 0.025x on Claude Fable 5.1 / Mythos 5.1. The per-turn economics line used a flat 0.1x cache-read multiplier for every Claude model, overstating `eq` and understating `saving %` on the models with the discounted cache-hit price. `tokenline.sh` now reads `model.id` and picks 0.025x for Fable 5.1 / Mythos 5.1; every other model keeps 0.1x.
+- [#75](https://github.com/inbrace-tech/tokenline/pull/75) [`b3730ec`](https://github.com/inbrace-tech/tokenline/commit/b3730ec441889f680de6297892be28b9cfcf276d) Thanks [@ropdias](https://github.com/ropdias)! - fix: bill cache reads at 0.025x on Claude Fable 5.1 / Mythos 5.1; other models keep 0.1x
 
 ## 1.2.1
 
 ### Patch Changes
 
-- 60ba6a6: Add `--antigravity` flag to installer CLI to target Antigravity CLI global settings (`~/.gemini/antigravity-cli/settings.json`).
+- [#61](https://github.com/inbrace-tech/tokenline/pull/61) [`60ba6a6`](https://github.com/inbrace-tech/tokenline/commit/60ba6a61788e269d2b1f32566db5e140498cfee0) Thanks [@ropdias](https://github.com/ropdias)! - feat: add `--antigravity` to install into the Antigravity CLI global settings
 
 ## 1.2.0
 
 ### Minor Changes
 
-- 5e7274b: Add macOS support. `tokenline.sh` now abstracts `date`/`stat` over GNU vs BSD by
-  probing behavior once (`epoch_from_iso`, `file_mtime`), pins `LC_ALL=C` so a
-  comma-decimal locale renders identically, and the installer accepts macOS
-  (`brew install bash jq`). Closes #2.
+- [#23](https://github.com/inbrace-tech/tokenline/pull/23) [`5e7274b`](https://github.com/inbrace-tech/tokenline/commit/5e7274b49ddfe2f55ac0269a2cce16ffd3590990) Thanks [@xinnaider](https://github.com/xinnaider)! - feat: add macOS support (BSD `date`/`stat`, locale-safe rendering)
 
 ## 1.1.2
 
 ### Patch Changes
 
-- 6e77d23: docs: update README to clarify tokenline features and real-time cost tracking
+- [#20](https://github.com/inbrace-tech/tokenline/pull/20) [`6e77d23`](https://github.com/inbrace-tech/tokenline/commit/6e77d2381454bf466d1ab62225b3d00146f15bad) Thanks [@ropdias](https://github.com/ropdias)! - docs: clarify the tokenline features and real-time cost tracking in the README
 
 ## 1.1.1
 
 ### Patch Changes
 
-- 9351972: fix(docs): update installer README text to reflect local-first default and --global flag
+- [#18](https://github.com/inbrace-tech/tokenline/pull/18) [`9351972`](https://github.com/inbrace-tech/tokenline/commit/9351972185f222736c77c29f7f15f39e254ee86b) Thanks [@ropdias](https://github.com/ropdias)! - docs: fix the installer paths and the `--global` flag in the README
 
 ## 1.1.0
 
 ### Minor Changes
 
-- ab63142: Changed default installation to local project (.claude), added --global flag, and revamped README with quick start onboarding and Prompt Caching guide.
+- [#16](https://github.com/inbrace-tech/tokenline/pull/16) [`ab63142`](https://github.com/inbrace-tech/tokenline/commit/ab63142e8c6ee2730fbdd6dd32e9c45fba85ec4c) Thanks [@ropdias](https://github.com/ropdias)! - feat: install into the local project (`.claude`) by default; add `--global`
 
 ## 1.0.1
 
 ### Patch Changes
 
-- 0d349ac: Fix CLI parser to collect and report all unknown options instead of just the last one.
+- [#14](https://github.com/inbrace-tech/tokenline/pull/14) [`0d349ac`](https://github.com/inbrace-tech/tokenline/commit/0d349ac36c795123c6c0b708dc6a041c0f00b906) Thanks [@ropdias](https://github.com/ropdias)! - fix: report every unknown CLI option, not just the last one
