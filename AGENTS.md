@@ -47,6 +47,15 @@ Runs on Linux / WSL2 and macOS. `date`/`stat` are abstracted over GNU vs BSD by
 probing behavior once (`epoch_from_iso`, `file_mtime` in `tokenline.sh`); `mapfile`
 still needs bash 4+, so macOS users `brew install bash`. Windows is a roadmap issue.
 
+## Changesets
+
+A user-facing change ships with a changeset, and **its summary is one line** —
+what a user receives, at most 200 characters, one paragraph. It becomes one bullet
+of `CHANGELOG.md` and of the GitHub Release, rendered by
+`@changesets/changelog-github` with a link to the pull request. Put the reasoning
+and the testing notes in the pull request body instead. `pnpm changeset:check`
+enforces it, and CI runs it.
+
 ## The npm installer
 
 `src/cli.ts` is the installer CLI, authored in TypeScript and built with `tsc`

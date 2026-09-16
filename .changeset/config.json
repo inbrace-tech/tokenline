@@ -1,6 +1,11 @@
 {
   "$schema": "https://unpkg.com/@changesets/config@4.0.0/schema.json",
-  "changelog": "@changesets/cli/changelog",
+  "changelog": [
+    "@changesets/changelog-github",
+    {
+      "repo": "inbrace-tech/tokenline"
+    }
+  ],
   "commit": false,
   "fixed": [],
   "linked": [],
