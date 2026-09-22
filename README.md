@@ -99,7 +99,10 @@ On macOS: `brew install bash jq`. BSD `date`/`stat` work as-is; no `coreutils` n
 
 ### Without Node (clone + install.sh)
 
-No Node? Clone the repo and run the dependency checker, which prints a ready-to-paste snippet:
+No Node? Clone the repo and run the installer. It checks dependencies, then
+copies `tokenline.sh` into the profile(s) you pick and patches each
+`settings.json` with the same safety contract as the npm CLI (backup,
+merge-only, idempotent, never clobbers invalid JSON):
 
 ```bash
 git clone https://github.com/inbrace-tech/tokenline.git
@@ -107,17 +110,37 @@ cd tokenline
 ./install.sh
 ```
 
-Add the printed block to your project's `.claude/settings.json` (or `~/.claude/settings.json` for global), inside the top-level object:
+It first asks you to pick a [theme](#themes), then discovers your Claude profile
+directories (`~/.claude`, any `~/.claude-*`, and `./.claude`) and lets you
+install into one or several at once — handy if you run multiple profiles. Use
+↑/↓ and space to choose; `~/.claude` is the default.
 
-```json
-"statusLine": {
-  "type": "command",
-  "command": "bash /absolute/path/to/tokenline/tokenline.sh",
-  "refreshInterval": 1
-}
+```bash
+./install.sh --theme minimal        # skip the theme prompt
+./install.sh --dir ~/.claude-work   # install into a specific directory
+./install.sh --yes                  # non-interactive, install into ~/.claude
+./install.sh --dry-run              # show what would happen, write nothing
+./install.sh --print                # just print the snippet to paste manually
+./install.sh --force                # replace a different existing statusLine
 ```
 
 Then restart Claude Code.
+
+### Themes
+
+The statusline ships five layouts, selected with `--theme <name>` in the
+`statusLine` command (or the `TOKENLINE_THEME` env var). `full` is the default
+and needs no flag.
+
+| Theme | Lines | Shows |
+| --- | --- | --- |
+| `full` | 3 | model · ctx · cache + per-turn economics + 5h/7d limit bars |
+| `minimal` | 1 | model · ctx% · cache state |
+| `compact` | 1 | model · ctx (tokens + %) · cache TTL · saving% |
+| `economics` | 2 | `full`'s first line + the per-turn economics breakdown |
+| `limits` | 2 | `full`'s first line + the 5h/7d rate-limit bars |
+
+An unknown theme name falls back to `full`, so a typo never blanks the line.
 
 ### What the installer does
 
