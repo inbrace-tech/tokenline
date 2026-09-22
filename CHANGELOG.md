@@ -1,5 +1,11 @@
 # @inbrace-tech/tokenline
 
+## 1.2.4
+
+### Patch Changes
+
+- fix: bill cache reads at 0.05x on Claude Opus 5.5, so the per-turn `eq` and `saving %` match its discounted cache-hit price. ([#103](https://github.com/inbrace-tech/tokenline/pull/103) by [@ropdias](https://github.com/ropdias))
+
 ## 1.2.3
 
 ### Patch Changes
