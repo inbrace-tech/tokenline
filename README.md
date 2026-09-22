@@ -67,7 +67,7 @@ LLMs are stateless — by default, they must reread your entire codebase context
 
 **Prompt Caching** solves this by saving that processed state in the provider's memory:
 - **Cache Write (Cold):** The model reads everything and stores the state. This costs slightly more than base tokens.
-- **Cache Hit (Warm):** If your prompt prefix matches the cached state exactly, the model skips the reading phase. This is **~90% cheaper** (**97.5%** on Claude Fable 5.1 / Mythos 5.1, which bill cache hits at 0.025x base input) and starts responding almost instantly. `tokenline` picks the right multiplier from the active model.
+- **Cache Hit (Warm):** If your prompt prefix matches the cached state exactly, the model skips the reading phase. This is **~90% cheaper** (**97.5%** on Claude Fable 5.1 / Mythos 5.1, which bill cache hits at 0.025x base input, and **95%** on Claude Opus 5.5 at 0.05x) and starts responding almost instantly. `tokenline` picks the right multiplier from the active model.
 - **TTL (Time-To-Live):** The cache operates as a **sliding window**. Every cache hit resets the countdown to its full duration for free. The secret to minimizing rate-limit drain is adjusting your workflow pace to keep the cache continuously **HOT**.
 
 ### 💡 Pro-tip: Forcing a 5m TTL to save rate limits
