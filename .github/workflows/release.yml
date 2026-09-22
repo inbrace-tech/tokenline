@@ -1,5 +1,5 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# Release — triggered on pushes to main.
+# Release — triggered on pushes to main, or by hand (workflow_dispatch).
 # Reads pending .changeset/*.md files, bumps versions, generates CHANGELOG.md,
 # creates a "chore: version packages" PR, and publishes to NPM when merged.
 # The PR title/commit are set to a conventional-commits form (lowercase subject)
@@ -16,6 +16,11 @@ on:
   push:
     branches:
       - main
+  # Manual re-run: GitHub occasionally drops a push event, so a merged
+  # "chore: version packages" PR gets no Release run and nothing publishes.
+  # Dispatching re-runs the same logic on the current main; it is idempotent
+  # (publishes only a version not yet on npm).
+  workflow_dispatch:
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
@@ -29,6 +34,8 @@ permissions:
 jobs:
   release:
     name: Version and Publish
+    # A dispatch can target any branch; only main may version or publish.
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
