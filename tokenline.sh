@@ -21,9 +21,7 @@ export LC_ALL=C
 # The installer (npm `init`/`update`, or the release asset) rewrites these two
 # lines in the copy it installs: the version it shipped and the exact command
 # that updates this copy. Left empty here, so the repo copy never checks.
-# shellcheck disable=SC2034  # read by the update check (#106)
 TOKENLINE_VERSION=""
-# shellcheck disable=SC2034
 TOKENLINE_UPDATE_CMD=""
 
 # --- Colors & Formatting Constants ---
@@ -477,7 +475,60 @@ compute_turn_breakdown() {
   fi
 }
 
-# --- 7. Compose and Render Output ---
+# --- 7. Update Notice ---
+version_gt() {
+  # 0 when x.y.z $1 is newer than x.y.z $2 (both pre-validated). 10# keeps a
+  # leading zero from being read as octal.
+  local -a a b
+  IFS=. read -ra a <<< "$1"
+  IFS=. read -ra b <<< "$2"
+  local i
+  for i in 0 1 2; do
+    (( 10#${a[i]} > 10#${b[i]} )) && return 0
+    (( 10#${a[i]} < 10#${b[i]} )) && return 1
+  done
+  return 1
+}
+
+compute_update_notice() {
+  # Installed (stamped) copies only; the repo copy has no version and never checks.
+  # At most once per 24h a detached curl stores the latest published version in
+  # the private runtime dir, and the render path only reads that file. Nothing
+  # from the session is sent, and nothing downloaded is ever executed.
+  # Opt out with TOKENLINE_NO_UPDATE_CHECK=1 (DO_NOT_TRACK=1 is honored too).
+  update_info=""
+  local semver='^[0-9]+\.[0-9]+\.[0-9]+$'
+  [[ "$TOKENLINE_VERSION" =~ $semver ]] || return 0
+  [ "${TOKENLINE_NO_UPDATE_CHECK:-}" = "1" ] && return 0
+  [ "${DO_NOT_TRACK:-}" = "1" ] && return 0
+  # Only a private dir we own: never create or follow files in shared /tmp.
+  [ "$_runtime_dir" != "/tmp" ] && [ -O "$_runtime_dir" ] || return 0
+
+  local latest_file="$_runtime_dir/latest-version"
+  local checked_at
+  checked_at=$(file_mtime "$latest_file")
+  if { [ -z "$checked_at" ] || [ $((now - checked_at)) -ge 86400 ]; } \
+    && command -v curl >/dev/null 2>&1; then
+    # Mark the check first, so the refreshes during the fetch don't start another.
+    touch "$latest_file" 2>/dev/null
+    (
+      v=$(curl -fsS --max-time 5 https://registry.npmjs.org/@inbrace-tech/tokenline/latest \
+        | jq -r '.version // empty')
+      [[ "$v" =~ $semver ]] && printf '%s\n' "$v" > "$latest_file.tmp" \
+        && mv -f "$latest_file.tmp" "$latest_file"
+    ) < /dev/null > /dev/null 2>&1 &
+    disown 2>/dev/null
+  fi
+
+  local latest=""
+  read -r latest 2>/dev/null < "$latest_file"
+  [[ "$latest" =~ $semver ]] || return 0
+  version_gt "$latest" "$TOKENLINE_VERSION" || return 0
+  update_info=$(printf '%s↑ tokenline %s available · %s%s' \
+    "$COLOR_DARK_GRAY" "$latest" "$TOKENLINE_UPDATE_CMD" "$COLOR_RESET")
+}
+
+# --- 8. Compose and Render Output ---
 render_statusline() {
   # Line 1: client/model | ctx | cache TTL
   local display_header=""
@@ -506,6 +557,11 @@ render_statusline() {
     [ -n "$rl_7d_info" ] && line_rl="${line_rl:+$line_rl  }$rl_7d_info"
     printf "%s\n" "$line_rl"
   fi
+
+  # Last line: update notice (stamped installs with a newer version published)
+  if [ -n "$update_info" ]; then
+    printf "%s\n" "$update_info"
+  fi
 }
 
 # --- Orchestrated Execution Flow ---
@@ -514,4 +570,5 @@ compute_cache_timer
 compute_context_info
 compute_rate_limits
 compute_turn_breakdown
+compute_update_notice
 render_statusline
