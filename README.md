@@ -30,6 +30,16 @@ npx @inbrace-tech/tokenline init --antigravity
 
 Simply restart Claude Code or Antigravity, and your new statusline will be live.
 
+### Updating
+
+The installed `tokenline.sh` is a copy, so it stays on the version you installed until you update it. Use the same scope flag you installed with:
+
+```bash
+npx @inbrace-tech/tokenline@latest update --global   # or: update (project), update --antigravity
+```
+
+`update` finds the script your `statusLine` points at and replaces it. It never edits `settings.json`, and there's nothing to restart.
+
 ---
 
 ## Preview
@@ -128,8 +138,9 @@ Then restart Claude Code.
 - **Backs up** `settings.json` to `settings.json.bak` before writing.
 - **Never clobbers** invalid JSON: if it can't parse your `settings.json`, it stops and prints the block to paste manually.
 - Is **idempotent**, and won't replace a different existing `statusLine` unless you pass `--force`.
+- **Stamps** the copy with the installed version and the command that updates it (two lines near the top of the script). The repo's own `tokenline.sh` stays unstamped.
 
-Other commands: `doctor` (check dependencies and config, change nothing) and `uninstall` (remove the block; `--purge` also deletes the script).
+Other commands: `update` (replace the installed script, see [Updating](#updating)), `doctor` (check dependencies and config, change nothing) and `uninstall` (remove the block; `--purge` also deletes the script).
 
 ### Antigravity CLI
 

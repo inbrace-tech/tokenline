@@ -9,6 +9,7 @@
 //   npx @inbrace-tech/tokenline init              # install into ./.claude (project)
 //   npx @inbrace-tech/tokenline init --global     # install into ~/.claude (global)
 //   npx @inbrace-tech/tokenline init --antigravity # install into ~/.gemini/antigravity-cli
+//   npx @inbrace-tech/tokenline@latest update --global # refresh the installed script
 //   npx @inbrace-tech/tokenline doctor            # check deps, change nothing
 //   npx @inbrace-tech/tokenline uninstall         # remove the statusLine block
 //
@@ -22,6 +23,7 @@ import { join } from 'node:path'
 import { cmdDoctor } from './commands/doctor'
 import { cmdInit } from './commands/init'
 import { cmdUninstall } from './commands/uninstall'
+import { cmdUpdate } from './commands/update'
 import { bold, err, warn } from './shared/logger'
 import type { Options } from './shared/types'
 
@@ -90,6 +92,7 @@ ${bold('Usage')}
 
 ${bold('Commands')}
   init          Install tokenline.sh and wire it into settings
+  update        Replace the installed tokenline.sh with this version (run it as @latest)
   doctor        Check dependencies and current config — changes nothing
   uninstall     Remove the tokenline statusLine block from settings
 
@@ -126,7 +129,10 @@ function main(): void {
   try {
     switch (opts._[0]) {
       case 'init':
-        cmdInit(opts)
+        cmdInit(opts, PKG.version)
+        break
+      case 'update':
+        cmdUpdate(opts, PKG.version)
         break
       case 'doctor':
         cmdDoctor()

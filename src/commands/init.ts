@@ -1,18 +1,15 @@
-import { chmodSync, copyFileSync, mkdirSync, writeFileSync } from 'node:fs'
+import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 
-import {
-  SCRIPT_SOURCE,
-  scriptTarget,
-  settingsTarget,
-  statusLineCommand,
-} from '../core/paths'
+import { scriptTarget, settingsTarget, statusLineCommand } from '../core/paths'
 import { backup, readSettings } from '../core/settings'
+import { updateCommand } from '../core/stamp'
+import { writeStampedScript } from '../infra/script'
 import { checkBash, checkJq, checkPlatform } from '../infra/system'
 import { bold, err, green, step, warn } from '../shared/logger'
 import type { Options, Settings, StatusLineBlock } from '../shared/types'
 
-export function cmdInit(opts: Options): void {
+export function cmdInit(opts: Options, version: string): void {
   console.log(bold('\ntokenline — installing the statusline\n'))
 
   const supported = checkPlatform()
@@ -64,10 +61,8 @@ export function cmdInit(opts: Options): void {
   }
 
   // 1) Write the statusline script (executable).
-  mkdirSync(dirname(scriptPath), { recursive: true })
-  copyFileSync(SCRIPT_SOURCE, scriptPath)
-  chmodSync(scriptPath, 0o755)
-  step(`wrote ${scriptPath}`)
+  writeStampedScript(scriptPath, version, updateCommand(opts))
+  step(`wrote ${scriptPath} (v${version})`)
 
   // 2) Patch settings.json: back up, then merge only the statusLine key.
   const data: Settings = s.data ?? {}
