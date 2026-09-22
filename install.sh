@@ -15,6 +15,13 @@
 # ==============================================================================
 set -euo pipefail
 
+# Everything runs inside main(), called on the last line. Piped through
+# `curl | bash`, bash executes a script as it arrives; a function only runs once
+# its whole body has been read, so a download cut off mid-way runs nothing.
+# The body is deliberately not indented: the snippet below is a heredoc, and
+# indenting it would change what gets printed.
+main() {
+
 c_green=$'\033[0;32m'; c_red=$'\033[0;31m'; c_yellow=$'\033[0;33m'; c_reset=$'\033[0m'
 ok()   { printf '%s✓%s %s\n' "$c_green"  "$c_reset" "$1"; }
 warn() { printf '%s!%s %s\n'      "$c_yellow" "$c_reset" "$1"; }
@@ -137,3 +144,6 @@ cat <<EOF
   }
 EOF
 printf '\nThen restart Claude Code or Antigravity CLI. Enjoy your cache-aware statusline.\n\n'
+}
+
+main "$@"
