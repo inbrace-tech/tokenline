@@ -107,9 +107,19 @@ On macOS: `brew install bash jq`. BSD `date`/`stat` work as-is; no `coreutils` n
 
 ## Advanced Installation
 
+### Without Node (curl)
+
+No Node? Download the latest release's `tokenline.sh` to `~/.claude/` in one line:
+
+```bash
+curl -fsSL https://github.com/inbrace-tech/tokenline/releases/latest/download/install.sh | bash
+```
+
+It checks the dependencies and prints the `statusLine` block to paste into `settings.json` (see below). Run the same command again to update; once the block is in place, there's nothing else to do. Set `TOKENLINE_DIR` to install somewhere else, e.g. `TOKENLINE_DIR=~/.gemini/antigravity-cli` for the Antigravity CLI.
+
 ### Without Node (clone + install.sh)
 
-No Node? Clone the repo and run the dependency checker, which prints a ready-to-paste snippet:
+Prefer a clone? Run the dependency checker, which prints a ready-to-paste snippet:
 
 ```bash
 git clone https://github.com/inbrace-tech/tokenline.git
