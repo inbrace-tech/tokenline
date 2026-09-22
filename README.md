@@ -40,6 +40,14 @@ npx @inbrace-tech/tokenline@latest update --global   # or: update (project), upd
 
 `update` finds the script your `statusLine` points at and replaces it. It never edits `settings.json`, and there's nothing to restart.
 
+You don't have to remember to check. About once a day, an installed copy looks up the latest published version in the background. When a newer one exists, it adds one gray line to the statusline:
+
+```
+↑ tokenline 1.3.0 available · npx @inbrace-tech/tokenline@latest update --global
+```
+
+The check is a single `GET` to `registry.npmjs.org` for the version number, made only if `curl` is installed. It runs detached, so rendering never waits on the network. Nothing about your session is sent, and nothing downloaded is executed: only a plain `x.y.z` version is accepted and shown. To turn it off, set `TOKENLINE_NO_UPDATE_CHECK=1` (`DO_NOT_TRACK=1` works too).
+
 ---
 
 ## Preview
