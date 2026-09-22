@@ -7,17 +7,58 @@
 # block so you can paste it where you want (global or per-project).
 #
 # Usage:
-#   ./install.sh
+#   ./install.sh                  # from a clone: uses the tokenline.sh next to it
+#   curl -fsSL https://github.com/inbrace-tech/tokenline/releases/latest/download/install.sh | bash
+#                                 # no clone: downloads the latest release's
+#                                 # tokenline.sh to ~/.claude (TOKENLINE_DIR to
+#                                 # change it). Re-running it updates in place.
 # ==============================================================================
 set -euo pipefail
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-TOKENLINE="$SCRIPT_DIR/tokenline.sh"
 
 c_green=$'\033[0;32m'; c_red=$'\033[0;31m'; c_yellow=$'\033[0;33m'; c_reset=$'\033[0m'
 ok()   { printf '%s✓%s %s\n' "$c_green"  "$c_reset" "$1"; }
 warn() { printf '%s!%s %s\n'      "$c_yellow" "$c_reset" "$1"; }
 err()  { printf '%s✗%s %s\n' "$c_red"    "$c_reset" "$1"; }
+
+# From a clone, BASH_SOURCE points at this file and tokenline.sh sits next to it.
+# Piped through `curl | bash` there is no file, so download the release asset,
+# which the Release workflow stamps with its version and this update command.
+SCRIPT_DIR=""
+if [ -n "${BASH_SOURCE[0]:-}" ] && [ -f "${BASH_SOURCE[0]}" ]; then
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+fi
+
+if [ -n "$SCRIPT_DIR" ] && [ -f "$SCRIPT_DIR/tokenline.sh" ]; then
+  TOKENLINE="$SCRIPT_DIR/tokenline.sh"
+else
+  dest_dir="${TOKENLINE_DIR:-$HOME/.claude}"
+  asset_url="${TOKENLINE_ASSET_URL:-https://github.com/inbrace-tech/tokenline/releases/latest/download/tokenline.sh}"
+  printf '\ntokenline — downloading the latest release\n'
+  printf '%s\n' "--------------------------------"
+  if ! command -v curl >/dev/null 2>&1; then
+    err "curl not found — install curl, or clone the repo and run ./install.sh"
+    exit 1
+  fi
+  mkdir -p "$dest_dir"
+  tmp="$(mktemp "$dest_dir/.tokenline.sh.XXXXXX")"
+  trap 'rm -f "$tmp"' EXIT
+  if ! curl -fsSL "$asset_url" -o "$tmp"; then
+    err "download failed: $asset_url"
+    exit 1
+  fi
+  # Refuse anything that isn't a stamped tokenline.sh (an error page, a proxy
+  # login page, a truncated file) before it replaces a working statusline.
+  version="$(sed -n 's/^TOKENLINE_VERSION="\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\)"$/\1/p' "$tmp")"
+  if [ "$(head -n 1 "$tmp")" != "#!/usr/bin/env bash" ] || [ -z "$version" ]; then
+    err "downloaded file is not a tokenline.sh release asset — nothing changed"
+    exit 1
+  fi
+  chmod 755 "$tmp"
+  mv -f "$tmp" "$dest_dir/tokenline.sh"
+  trap - EXIT
+  TOKENLINE="$dest_dir/tokenline.sh"
+  ok "tokenline.sh v$version → $TOKENLINE"
+fi
 
 printf '\ntokenline — dependency check\n'
 printf '%s\n' "--------------------------------"
@@ -75,6 +116,15 @@ if [ "$missing" -ne 0 ]; then
   warn "Windows support is on the roadmap (see README)."
   printf '\n'
 fi
+
+# Already wired (a re-run to update): the block is in place, nothing to paste.
+for settings in "$HOME/.claude/settings.json" "$HOME/.gemini/antigravity-cli/settings.json"; do
+  if [ -f "$settings" ] && grep -qF "\"bash $TOKENLINE\"" "$settings"; then
+    ok "already wired in $settings — the statusline picks up this version on its next refresh"
+    printf '\n'
+    exit 0
+  fi
+done
 
 printf 'Add this to %s/.claude/settings.json (or project .claude/settings.json)\n' "$HOME"
 printf 'or %s/.gemini/antigravity-cli/settings.json (for Antigravity CLI),\n' "$HOME"

@@ -81,3 +81,25 @@ jobs:
           # NPM_CONFIG_PROVENANCE=true attaches a signed provenance statement to
           # every published tarball, linking it back to this exact workflow run.
           NPM_CONFIG_PROVENANCE: "true"
+
+      # Attach the statusline to the GitHub Release, for installs without Node:
+      # `curl -fsSL .../releases/latest/download/install.sh | bash`. The asset is
+      # stamped like an npm install (see src/core/stamp.ts): its version, and the
+      # curl command as its update path. Exactly one of each placeholder, or fail.
+      - name: Attach tokenline.sh and install.sh to the release
+        if: steps.changesets.outputs.published == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          UPDATE_CMD: curl -fsSL https://github.com/inbrace-tech/tokenline/releases/latest/download/install.sh | bash
+        run: |
+          version="$(jq -r .version package.json)"
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "bad version: $version"; exit 1; }
+          mkdir -p release-assets
+          awk -v v="$version" -v cmd="$UPDATE_CMD" '
+            $0 == "TOKENLINE_VERSION=\"\""    { print "TOKENLINE_VERSION=\"" v "\""; n++; next }
+            $0 == "TOKENLINE_UPDATE_CMD=\"\"" { print "TOKENLINE_UPDATE_CMD=\047" cmd "\047"; n++; next }
+            { print }
+            END { exit (n == 2 ? 0 : 1) }
+          ' tokenline.sh > release-assets/tokenline.sh
+          cp install.sh release-assets/install.sh
+          gh release upload "v${version}" release-assets/tokenline.sh release-assets/install.sh --clobber
