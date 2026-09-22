@@ -156,13 +156,17 @@ parse_and_prepare_paths() {
     is_gemini=true
   fi
 
-  # Claude Fable 5.1 and Mythos 5.1 bill cache hits at 0.025x base input instead of
-  # the standard 0.1x. Match the API id (claude-fable-5-1[1m]) or the display name
-  # (Fable 5.1) so either field alone is enough.
-  discounted_cache_read=false
-  local discounted_re='(fable|mythos)[- ]5[-.]1([^0-9]|$)'
-  if [[ "${model_id,,}" =~ $discounted_re ]] || [[ "${model,,}" =~ $discounted_re ]]; then
-    discounted_cache_read=true
+  # Cache hits bill at 0.1x base input, except Claude Fable 5.1 / Mythos 5.1 (0.025x)
+  # and Claude Opus 5.5 (0.05x). Match the API id (claude-fable-5-1[1m]) or the
+  # display name (Fable 5.1) so either field alone is enough. Pin the full version:
+  # claude-opus-5 must stay 0.1x, and a later version's price is confirmed, not guessed.
+  claude_read_mult="0.1"
+  local fable_re='(fable|mythos)[- ]5[-.]1([^0-9]|$)'
+  local opus_re='opus[- ]5[-.]5([^0-9]|$)'
+  if [[ "${model_id,,}" =~ $fable_re ]] || [[ "${model,,}" =~ $fable_re ]]; then
+    claude_read_mult="0.025"
+  elif [[ "${model_id,,}" =~ $opus_re ]] || [[ "${model,,}" =~ $opus_re ]]; then
+    claude_read_mult="0.05"
   fi
 
   # Get the current epoch timestamp once to be reused across all calculations
@@ -425,8 +429,7 @@ compute_turn_breakdown() {
       input_mult="1"
       output_mult="4"
     else
-      read_mult="0.1"
-      [ "$discounted_cache_read" = true ] && read_mult="0.025"
+      read_mult="$claude_read_mult"
       write_mult="1.25"
       [ "${ttl_label:-5m}" = "1h" ] && write_mult="2"
       input_mult="1"
