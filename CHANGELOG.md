@@ -1,5 +1,17 @@
 # @inbrace-tech/tokenline
 
+## 1.3.0
+
+### Minor Changes
+
+- feat: `npx @inbrace-tech/tokenline@latest update` replaces the installed `tokenline.sh` in place, without touching `settings.json`. ([#107](https://github.com/inbrace-tech/tokenline/pull/107) by [@ropdias](https://github.com/ropdias))
+
+- feat: installed copies show a one-line notice when a newer version is published (daily background check, opt out with `TOKENLINE_NO_UPDATE_CHECK=1`). ([#108](https://github.com/inbrace-tech/tokenline/pull/108) by [@ropdias](https://github.com/ropdias))
+
+### Patch Changes
+
+- fix: `init` and `update` replace `tokenline.sh` atomically, so a refresh mid-update never runs a half-written script. ([#109](https://github.com/inbrace-tech/tokenline/pull/109) by [@ropdias](https://github.com/ropdias))
+
 ## 1.2.4
 
 ### Patch Changes
