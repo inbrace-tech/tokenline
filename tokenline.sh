@@ -17,6 +17,15 @@
 # stay deterministic even when the user exports LC_ALL. Output is ASCII/bytes.
 export LC_ALL=C
 
+# --- Install stamp ---
+# The installer (npm `init`/`update`, or the release asset) rewrites these two
+# lines in the copy it installs: the version it shipped and the exact command
+# that updates this copy. Left empty here, so the repo copy never checks.
+# shellcheck disable=SC2034  # read by the update check (#106)
+TOKENLINE_VERSION=""
+# shellcheck disable=SC2034
+TOKENLINE_UPDATE_CMD=""
+
 # --- Colors & Formatting Constants ---
 COLOR_GRAY=$'\033[38;5;244m'
 COLOR_DARK_GRAY=$'\033[38;5;240m'
