@@ -40,6 +40,8 @@ npx @inbrace-tech/tokenline@latest update --global   # or: update (project), upd
 
 `update` finds the script your `statusLine` points at and replaces it. It never edits `settings.json`, and there's nothing to restart.
 
+Because of that, a feature that needs a new settings key isn't switched on by `update` alone. Installed before [subagent rows](#subagent-rows-claude-code)? `update` says so and prints the one command that adds them, for the same scope and `--dir`, e.g. `npx -y @inbrace-tech/tokenline@latest init --global`. Re-running `init` is safe: it confirms your existing `statusLine` and only adds `subagentStatusLine`.
+
 You don't have to remember to check. An installed copy looks up the latest published version in the background: when you open a new session (if the last check is over an hour old), and at least every 6 hours in a long one. When a newer version exists, it adds one gray line to the statusline:
 
 ```
