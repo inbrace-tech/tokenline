@@ -9,6 +9,12 @@ Antigravity). The host CLI pipes a JSON snapshot of the session to the script on
 stdin once per second; the script prints up to three lines (model/context/cache,
 per-turn token economics, rate limits).
 
+The same file also renders Claude Code's agent panel when it is wired as
+`subagentStatusLine`: a payload carrying a `tasks` array switches it to one
+`{"id","content"}` JSON line per subagent, each with that subagent's own cache
+countdown read from its transcript. Test that mode by feeding such a payload
+(see `src/infra/subagent-rows.spec.ts` for a full fixture).
+
 The product is `tokenline.sh` — that's what renders every second. Two installers
 wrap it: `install.sh` (bash, no Node) prints the settings snippet, and the npm
 package `@inbrace-tech/tokenline` (a TypeScript CLI in `src/`, built to

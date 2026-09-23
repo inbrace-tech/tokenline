@@ -1,7 +1,7 @@
 import { existsSync, unlinkSync, writeFileSync } from 'node:fs'
 
 import { scriptTarget, settingsTarget } from '../core/paths'
-import { backup, isTokenlineCommand, readSettings } from '../core/settings'
+import { backup, readSettings, removeTokenlineBlocks } from '../core/settings'
 import { bold, green, step, warn } from '../shared/logger'
 import type { Options } from '../shared/types'
 
@@ -10,18 +10,17 @@ export function cmdUninstall(opts: Options): void {
   const settingsPath = settingsTarget(opts)
   const s = readSettings(settingsPath)
 
+  const ours = (s.data ? removeTokenlineBlocks({ ...s.data }) : []).join(' + ')
   if (!s.exists || s.data === null) {
     warn(`No usable settings at ${settingsPath} — nothing to remove.`)
-  } else if (isTokenlineCommand(s.data.statusLine?.command)) {
+  } else if (ours !== '') {
     if (opts.dryRun) {
-      step(`[dry-run] would remove statusLine from ${settingsPath}`)
+      step(`[dry-run] would remove ${ours} from ${settingsPath}`)
     } else {
       backup(settingsPath)
-      delete s.data.statusLine
+      removeTokenlineBlocks(s.data)
       writeFileSync(settingsPath, JSON.stringify(s.data, null, 2) + '\n')
-      step(
-        `removed statusLine from ${settingsPath} (backup: settings.json.bak)`,
-      )
+      step(`removed ${ours} from ${settingsPath} (backup: settings.json.bak)`)
     }
   } else {
     step(`No tokenline statusLine in ${settingsPath} — left untouched.`)
