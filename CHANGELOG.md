@@ -1,5 +1,11 @@
 # @inbrace-tech/tokenline
 
+## 1.4.0
+
+### Minor Changes
+
+- feat: the update notice shows up when you open a new session (checked at most hourly, every 6h in long sessions) and tells you to run it with `!` in Claude Code. ([#113](https://github.com/inbrace-tech/tokenline/pull/113) by [@ropdias](https://github.com/ropdias))
+
 ## 1.3.0
 
 ### Minor Changes
