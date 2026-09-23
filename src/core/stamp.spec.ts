@@ -3,7 +3,12 @@ import { join } from 'node:path'
 
 import type { Target } from '../shared/types'
 import { statusLineCommand } from './paths'
-import { scriptPathFromCommand, stampScript, updateCommand } from './stamp'
+import {
+  CURL_UPDATE_CMD,
+  scriptPathFromCommand,
+  stampScript,
+  updateCommand,
+} from './stamp'
 
 const REPO_SCRIPT = readFileSync(
   join(__dirname, '..', '..', 'tokenline.sh'),
@@ -56,6 +61,15 @@ describe('stampScript', () => {
     const cmd = 'curl -fsSL https://example.com/install.sh | bash'
     expect(stampScript(REPO_SCRIPT, '1.0.0', cmd)).toContain(
       `TOKENLINE_UPDATE_CMD='${cmd}'`,
+    )
+  })
+
+  it('stamps the release asset command: latest install.sh, piped to bash', () => {
+    expect(CURL_UPDATE_CMD).toBe(
+      'curl -fsSL https://github.com/inbrace-tech/tokenline/releases/latest/download/install.sh | bash',
+    )
+    expect(stampScript(REPO_SCRIPT, '1.3.0', CURL_UPDATE_CMD)).toContain(
+      `\nTOKENLINE_UPDATE_CMD='${CURL_UPDATE_CMD}'\n`,
     )
   })
 

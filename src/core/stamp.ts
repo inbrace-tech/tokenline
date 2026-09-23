@@ -8,6 +8,12 @@ const UPDATE_CMD_LINE = 'TOKENLINE_UPDATE_CMD=""'
 
 const SEMVER = /^\d+\.\d+\.\d+$/
 
+// Update command stamped into the release asset (installs made with
+// `curl … | bash`, no Node). The Release workflow stamps it through
+// scripts/stamp-release-asset.mts, so this file stays the one source of truth.
+export const CURL_UPDATE_CMD =
+  'curl -fsSL https://github.com/inbrace-tech/tokenline/releases/latest/download/install.sh | bash'
+
 // Exact command that updates the copy installed for this target. `update`
 // finds the script through the target's settings.json, so --dir needs no flag.
 export const updateCommand = (o: Target): string => {
