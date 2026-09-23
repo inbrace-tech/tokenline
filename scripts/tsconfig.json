@@ -22,7 +22,10 @@
     "moduleResolution": "nodenext",
     "noEmit": true,
     "allowImportingTsExtensions": true,
-    "rootDir": ".",
+    // The repo root, not ".": tooling may import the pure core it shares with
+    // the CLI (scripts/stamp-release-asset.mts uses src/core/stamp.ts), and
+    // with noEmit there is no output layout for rootDir to shape.
+    "rootDir": "..",
     "types": ["node"]
   },
   "include": ["**/*.mts"]
