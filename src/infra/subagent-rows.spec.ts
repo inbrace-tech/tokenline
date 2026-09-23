@@ -45,11 +45,14 @@ const toolResult = line({
   message: { content: [{ type: 'tool_result' }] },
 })
 
-function render(payload: unknown): { status: number | null; rows: Row[] } {
+function render(
+  payload: unknown,
+  env: NodeJS.ProcessEnv = {},
+): { status: number | null; rows: Row[] } {
   const r = spawnSync('bash', [SCRIPT], {
     input: typeof payload === 'string' ? payload : JSON.stringify(payload),
     encoding: 'utf8',
-    env: { ...process.env, XDG_RUNTIME_DIR: dir },
+    env: { ...process.env, XDG_RUNTIME_DIR: dir, ...env },
   })
   const rows = r.stdout
     .split('\n')
@@ -292,3 +295,73 @@ describe.skipIf(!hasJq)('tokenline.sh — subagent rows', () => {
     },
   )
 })
+
+// macOS ships BSD `date` and `stat`, which reject GNU's `-d` and `-c`. These
+// shims behave like the BSD tools (answering through the real GNU ones), and
+// sit first on PATH, so the script's BSD branches run on a Linux CI runner.
+const realBin = (name: string): string =>
+  spawnSync('bash', ['-c', `command -v ${name}`], {
+    encoding: 'utf8',
+  }).stdout.trim()
+const hasGnuTools =
+  spawnSync('date', ['-d', '@0']).status === 0 &&
+  spawnSync('stat', ['-c', '%Y', '.']).status === 0
+
+describe.skipIf(!hasJq || !hasGnuTools)(
+  'tokenline.sh — subagent rows on BSD date/stat (macOS)',
+  () => {
+    let shimDir: string
+
+    beforeEach(() => {
+      shimDir = join(dir, 'bsd-bin')
+      mkdirSync(shimDir)
+      // BSD stat: no -c; -f takes %m (mtime) and %z (size).
+      writeFileSync(
+        join(shimDir, 'stat'),
+        `#!/usr/bin/env bash
+real='${realBin('stat')}'
+[ "$1" = "-c" ] && { echo "stat: illegal option -- c" >&2; exit 1; }
+if [ "$1" = "-f" ]; then
+  m=$("$real" -c %Y "$3") || exit 1
+  z=$("$real" -c %s "$3") || exit 1
+  out="\${2//%m/$m}"; printf '%s\\n' "\${out//%z/$z}"; exit 0
+fi
+exec "$real" "$@"
+`,
+        { mode: 0o755 },
+      )
+      // BSD date: no -d; parses with -j -f <format> <string>.
+      writeFileSync(
+        join(shimDir, 'date'),
+        `#!/usr/bin/env bash
+real='${realBin('date')}'
+[ "$1" = "-d" ] && exit 1
+if [ "$1 $2 $3" = "-u -j -f" ]; then exec "$real" -u -d "$5" "$6"; fi
+exec "$real" "$@"
+`,
+        { mode: 0o755 },
+      )
+    })
+
+    const bsd = (): NodeJS.ProcessEnv => ({
+      PATH: `${shimDir}:${process.env.PATH ?? ''}`,
+    })
+
+    it('reads the countdown from the transcript timestamp, not the file mtime', () => {
+      const { status, rows } = render(payload(160), bsd())
+
+      expect(status).toBe(0)
+      // The transcript says 70s ago; an mtime fallback would read ~5:00.
+      expect(plain(rows[0].content)).toMatch(/\[5m\] cache: 3:[45]\d HOT/)
+      expect(plain(rows[1].content)).toContain('cache: COLD')
+    })
+
+    it('keeps the per-subagent scan cache working through stat -f', () => {
+      render(payload(160), bsd())
+      const again = render(payload(160), bsd())
+
+      expect(plain(again.rows[0].content)).toContain('waiting: Bash')
+      expect(plain(again.rows[0].content)).toMatch(/cache: 3:[45]\d HOT/)
+    })
+  },
+)
