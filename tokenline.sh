@@ -492,9 +492,11 @@ version_gt() {
 
 compute_update_notice() {
   # Installed (stamped) copies only; the repo copy has no version and never checks.
-  # At most once per 24h a detached curl stores the latest published version in
-  # the private runtime dir, and the render path only reads that file. Nothing
-  # from the session is sent, and nothing downloaded is ever executed.
+  # A detached curl stores the latest published version in the private runtime
+  # dir, and the render path only reads that file. It runs when a session that
+  # hasn't checked yet finds the last check 1h+ old (so a new release shows up
+  # when you open a new session), and at least every 6h in a long session.
+  # Nothing from the session is sent, and nothing downloaded is ever executed.
   # Opt out with TOKENLINE_NO_UPDATE_CHECK=1 (DO_NOT_TRACK=1 is honored too).
   update_info=""
   local semver='^[0-9]+\.[0-9]+\.[0-9]+$'
@@ -505,12 +507,25 @@ compute_update_notice() {
   [ "$_runtime_dir" != "/tmp" ] && [ -O "$_runtime_dir" ] || return 0
 
   local latest_file="$_runtime_dir/latest-version"
-  local checked_at
+  local session_file="$_runtime_dir/latest-version.session"
+  local checked_at checked_by="" due=false age
   checked_at=$(file_mtime "$latest_file")
-  if { [ -z "$checked_at" ] || [ $((now - checked_at)) -ge 86400 ]; } \
-    && command -v curl >/dev/null 2>&1; then
-    # Mark the check first, so the refreshes during the fetch don't start another.
+  read -r checked_by 2>/dev/null < "$session_file"
+  if [ -z "$checked_at" ]; then
+    due=true
+  else
+    age=$((now - checked_at))
+    if [ "$age" -ge 21600 ]; then
+      due=true
+    elif [ "$age" -ge 3600 ] && [ -n "$session_id" ] && [ "$session_id" != "$checked_by" ]; then
+      due=true
+    fi
+  fi
+  if [ "$due" = true ] && command -v curl >/dev/null 2>&1; then
+    # Mark the check first (time and session), so the refreshes during the fetch
+    # don't start another one.
     touch "$latest_file" 2>/dev/null
+    printf '%s\n' "$session_id" 2>/dev/null > "$session_file"
     (
       v=$(curl -fsS --max-time 5 https://registry.npmjs.org/@inbrace-tech/tokenline/latest \
         | jq -r '.version // empty')
@@ -524,8 +539,12 @@ compute_update_notice() {
   read -r latest 2>/dev/null < "$latest_file"
   [[ "$latest" =~ $semver ]] || return 0
   version_gt "$latest" "$TOKENLINE_VERSION" || return 0
-  update_info=$(printf '%s↑ tokenline %s available · %s%s' \
-    "$COLOR_DARK_GRAY" "$latest" "$TOKENLINE_UPDATE_CMD" "$COLOR_RESET")
+  # In Claude Code, a leading "!" runs the command from the prompt, so the
+  # update never needs another terminal.
+  local run_hint=""
+  [ "$cli_client" = "claude-code" ] && run_hint="! "
+  update_info=$(printf '%s↑ tokenline %s available · update: %s%s%s' \
+    "$COLOR_DARK_GRAY" "$latest" "$run_hint" "$TOKENLINE_UPDATE_CMD" "$COLOR_RESET")
 }
 
 # --- 8. Compose and Render Output ---

@@ -16,8 +16,9 @@ export const CURL_UPDATE_CMD =
 
 // Exact command that updates the copy installed for this target. `update`
 // finds the script through the target's settings.json, so --dir needs no flag.
+// -y skips npx's install prompt, so it also runs as a `!` command in Claude Code.
 export const updateCommand = (o: Target): string => {
-  const base = 'npx @inbrace-tech/tokenline@latest update'
+  const base = 'npx -y @inbrace-tech/tokenline@latest update'
   if (o.targetCli === 'antigravity') return `${base} --antigravity`
   return o.global ? `${base} --global` : base
 }

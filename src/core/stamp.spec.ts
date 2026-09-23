@@ -25,26 +25,26 @@ describe('updateCommand', () => {
 
   it('targets the project by default, global and antigravity by flag', () => {
     expect(updateCommand(t({}))).toBe(
-      'npx @inbrace-tech/tokenline@latest update',
+      'npx -y @inbrace-tech/tokenline@latest update',
     )
     expect(updateCommand(t({ global: true }))).toBe(
-      'npx @inbrace-tech/tokenline@latest update --global',
+      'npx -y @inbrace-tech/tokenline@latest update --global',
     )
     expect(updateCommand(t({ targetCli: 'antigravity', global: true }))).toBe(
-      'npx @inbrace-tech/tokenline@latest update --antigravity',
+      'npx -y @inbrace-tech/tokenline@latest update --antigravity',
     )
   })
 
   it('needs no --dir flag: update finds a custom dir through settings', () => {
     expect(updateCommand(t({ global: true, dir: '/opt/tl' }))).toBe(
-      'npx @inbrace-tech/tokenline@latest update --global',
+      'npx -y @inbrace-tech/tokenline@latest update --global',
     )
   })
 })
 
 describe('stampScript', () => {
   it('stamps the repo tokenline.sh: both lines filled, nothing else changed', () => {
-    const cmd = 'npx @inbrace-tech/tokenline@latest update --global'
+    const cmd = 'npx -y @inbrace-tech/tokenline@latest update --global'
     const out = stampScript(REPO_SCRIPT, '1.2.5', cmd)
 
     expect(out).toContain('\nTOKENLINE_VERSION="1.2.5"\n')
