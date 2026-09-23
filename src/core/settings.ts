@@ -23,3 +23,33 @@ export function backup(file: string): string {
 
 export const isTokenlineCommand = (cmd: string | undefined): boolean =>
   typeof cmd === 'string' && /tokenline\.sh/.test(cmd)
+
+export type SubagentPlan = 'add' | 'confirm' | 'replace' | 'keep'
+
+// What `init` does with subagentStatusLine. It is an extra on top of the main
+// statusLine, so another tool's block there never blocks the install: it is
+// kept ('keep') unless --force replaces it.
+export function planSubagentStatusLine(
+  existing: { command?: unknown } | undefined,
+  command: string,
+  force: boolean,
+): SubagentPlan {
+  if (existing === undefined) return 'add'
+  if (existing.command === command) return 'confirm'
+  return force ? 'replace' : 'keep'
+}
+
+// Removes every block tokenline owns from a parsed settings object, leaving
+// other tools' blocks alone. Returns the keys it removed.
+export function removeTokenlineBlocks(data: Settings): string[] {
+  const removed: string[] = []
+  if (isTokenlineCommand(data.statusLine?.command)) {
+    delete data.statusLine
+    removed.push('statusLine')
+  }
+  if (isTokenlineCommand(data.subagentStatusLine?.command)) {
+    delete data.subagentStatusLine
+    removed.push('subagentStatusLine')
+  }
+  return removed
+}

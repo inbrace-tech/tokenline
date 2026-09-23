@@ -2,7 +2,11 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import { readSettings } from './settings'
+import {
+  planSubagentStatusLine,
+  readSettings,
+  removeTokenlineBlocks,
+} from './settings'
 
 // readSettings is the first link in the settings.json patching contract (#5).
 // It has four branches, all covered here: an absent file (exists: false), an
@@ -64,4 +68,72 @@ it('parses a valid settings file, exposing both the data and its raw text', () =
   expect(result.exists).toBe(true)
   expect(result.data).toEqual(settings)
   expect(result.raw).toBe(raw)
+})
+
+describe('planSubagentStatusLine', () => {
+  const ours = 'bash /home/u/.claude/tokenline.sh'
+
+  it('adds the block when none exists', () => {
+    expect(planSubagentStatusLine(undefined, ours, false)).toBe('add')
+  })
+
+  it('confirms a block that already runs this exact command', () => {
+    expect(planSubagentStatusLine({ command: ours }, ours, false)).toBe(
+      'confirm',
+    )
+  })
+
+  it("keeps another tool's block without --force, so the install never fails on it", () => {
+    expect(
+      planSubagentStatusLine({ command: 'bash other.sh' }, ours, false),
+    ).toBe('keep')
+  })
+
+  it("replaces another tool's block with --force", () => {
+    expect(
+      planSubagentStatusLine({ command: 'bash other.sh' }, ours, true),
+    ).toBe('replace')
+  })
+})
+
+describe('removeTokenlineBlocks', () => {
+  it('removes both tokenline blocks and nothing else', () => {
+    const data = {
+      statusLine: {
+        type: 'command' as const,
+        command: 'bash /x/tokenline.sh',
+        refreshInterval: 1,
+      },
+      subagentStatusLine: {
+        type: 'command' as const,
+        command: 'bash /x/tokenline.sh',
+      },
+      theme: 'dark',
+    }
+
+    expect(removeTokenlineBlocks(data)).toEqual([
+      'statusLine',
+      'subagentStatusLine',
+    ])
+    expect(data).toEqual({ theme: 'dark' })
+  })
+
+  it("leaves another tool's subagentStatusLine in place", () => {
+    const data = {
+      statusLine: {
+        type: 'command' as const,
+        command: 'bash /x/tokenline.sh',
+        refreshInterval: 1,
+      },
+      subagentStatusLine: {
+        type: 'command' as const,
+        command: 'bash other.sh',
+      },
+    }
+
+    expect(removeTokenlineBlocks(data)).toEqual(['statusLine'])
+    expect(data).toEqual({
+      subagentStatusLine: { type: 'command', command: 'bash other.sh' },
+    })
+  })
 })
