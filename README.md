@@ -62,6 +62,22 @@ The check is a single `GET` to `registry.npmjs.org` for the version number, made
 
 > Lines 2 and 3 appear only when there's something to show (a turn happened, limits exist), so the bar stays quiet when idle.
 
+### Subagent rows (Claude Code)
+
+The same script also renders Claude Code's agent panel, one row per subagent, each with **its own** cache countdown:
+
+```
+code-reviewer    ●  3m32s  ctx: 45.2k (22%)   [5m] cache: 3:28 HOT  waiting: Bash  Review the auth diff
+general-purpose  ●  15m22s ctx: 170.0k (85%)  [5m] cache: COLD      last: Read     Run the e2e suite
+Explore          ✓  1m22s  ctx: 8.0k          [5m] cache: 4:18 HOT                 Find callers
+```
+
+Subagent requests write the **5-minute** cache. That's fine while a subagent keeps working, since every turn refreshes it. But a subagent that waits (on a long test run, a slow build, a question to you) goes cold without a sound, and its next turn pays a full cache write instead of a cheap read. The row shows it: the countdown runs while `waiting: Bash` names what it's waiting on (`waiting: Bash (bg)` for a subagent idling on its own background job, which Claude Code reports as finished until the job wakes it), and an active subagent that goes cold blinks `COLD`. Finished subagents keep their countdown (they can be resumed) but never blink.
+
+The countdown tracks the subagent's **own** last request. The part of the prompt it shares with siblings on the same model (system prompt, tools) can stay warm because of them, so after a `COLD` the next turn still reads that shared part from cache and re-writes the rest: its own conversation. Claude Code refreshes the agent panel every ~5 seconds, so the countdown moves in 5-second steps.
+
+Columns: agent type · status (`●` running, `✓` done, `✗` failed, `■` stopped) · model · effort · elapsed · context · cache · last tool · description. A field Claude Code hasn't sent yet (an unresolved model, an inherited effort, no transcript before the first response) stays blank or shows `cache: --`, never a guess. On a narrow panel the description is cut first, then effort, model, context, elapsed and activity are dropped whole, in that order; type, status and cache always stay. `init` wires this in as `subagentStatusLine`; pass `--no-subagents` to skip it.
+
 ## About
 
 `tokenline` turns the one-line status bar of your AI coding CLI into a live cockpit:
@@ -144,8 +160,14 @@ Add the printed block to your project's `.claude/settings.json` (or `~/.claude/s
   "type": "command",
   "command": "bash /absolute/path/to/tokenline/tokenline.sh",
   "refreshInterval": 1
+},
+"subagentStatusLine": {
+  "type": "command",
+  "command": "bash /absolute/path/to/tokenline/tokenline.sh"
 }
 ```
+
+(`subagentStatusLine` is Claude Code only — leave it out for the Antigravity CLI.)
 
 Then restart Claude Code.
 
@@ -154,10 +176,10 @@ Then restart Claude Code.
 `npx @inbrace-tech/tokenline init` is deliberately transparent about touching your config:
 
 - **Writes** `tokenline.sh` to `./.claude/` (or `~/.claude/` with `--global`, or `~/.gemini/antigravity-cli/` with `--antigravity`).
-- **Merges** only the `statusLine` key into `settings.json` — every other setting is preserved.
+- **Merges** only the `statusLine` key (and, for Claude Code, `subagentStatusLine`) into `settings.json` — every other setting is preserved.
 - **Backs up** `settings.json` to `settings.json.bak` before writing.
 - **Never clobbers** invalid JSON: if it can't parse your `settings.json`, it stops and prints the block to paste manually.
-- Is **idempotent**, and won't replace a different existing `statusLine` unless you pass `--force`.
+- Is **idempotent**, and won't replace a different existing `statusLine` unless you pass `--force`. A different existing `subagentStatusLine` is kept (with a note) rather than failing the install; `--force` replaces it too.
 - **Stamps** the copy with the installed version and the command that updates it (two lines near the top of the script). The repo's own `tokenline.sh` stays unstamped.
 
 Other commands: `update` (replace the installed script, see [Updating](#updating)), `doctor` (check dependencies and config, change nothing) and `uninstall` (remove the block; `--purge` also deletes the script).

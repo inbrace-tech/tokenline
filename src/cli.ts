@@ -41,6 +41,7 @@ function parseArgs(argv: string[]): Options {
     dryRun: false,
     force: false,
     purge: false,
+    subagents: true,
     help: false,
     version: false,
     unknown: [],
@@ -66,6 +67,9 @@ function parseArgs(argv: string[]): Options {
         break
       case '--purge':
         out.purge = true
+        break
+      case '--no-subagents':
+        out.subagents = false
         break
       case '-h':
       case '--help':
@@ -94,7 +98,7 @@ ${bold('Commands')}
   init          Install tokenline.sh and wire it into settings
   update        Replace the installed tokenline.sh with this version (run it as @latest)
   doctor        Check dependencies and current config — changes nothing
-  uninstall     Remove the tokenline statusLine block from settings
+  uninstall     Remove the tokenline blocks (statusLine, subagentStatusLine) from settings
 
 ${bold('Options')}
   --antigravity Target Antigravity CLI (~/.gemini/antigravity-cli)
@@ -103,6 +107,7 @@ ${bold('Options')}
   --dry-run     Show what would happen without writing anything
   --force       Proceed on an unsupported platform / replace an existing statusLine
   --purge       (uninstall) also delete the installed tokenline.sh
+  --no-subagents (init) skip the per-subagent cache rows in the agent panel
   -h, --help    Show this help
   -v, --version Show version
 

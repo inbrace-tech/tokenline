@@ -28,6 +28,18 @@ export function cmdDoctor(): void {
     } else {
       step(`${label} settings: not configured (${f})`)
     }
+
+    // The agent panel exists only in Claude Code.
+    if (target.targetCli === 'claude' && s.data) {
+      const sub = s.data.subagentStatusLine
+      if (isTokenlineCommand(sub?.command)) {
+        ok(`${label} subagent rows: tokenline configured`)
+      } else if (sub !== undefined) {
+        step(`${label} subagent rows: another command (${sub.command})`)
+      } else if (isTokenlineCommand(s.data.statusLine?.command)) {
+        step(`${label} subagent rows: not configured (re-run init to add)`)
+      }
+    }
   }
   console.log()
 }
