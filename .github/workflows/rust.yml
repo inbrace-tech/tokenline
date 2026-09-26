@@ -8,9 +8,9 @@ name: Rust
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, rust-parity-v1]
   push:
-    branches: [main]
+    branches: [main, rust-parity-v1]
 
 # Cancel stale PR runs; never cancel push-to-main runs.
 concurrency:
