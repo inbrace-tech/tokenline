@@ -1,0 +1,4 @@
+# Golden fixtures are byte-exact bash output: never convert line endings
+# (Windows runners check out with core.autocrlf=true, turning \n into \r\n).
+rust/tests/golden/** -text
+rust/tests/fixtures/** -text
