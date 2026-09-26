@@ -167,9 +167,10 @@ mod tests {
         let turn_epoch = crate::fmt::iso8601_to_epoch("2026-07-05T00:00:00Z").unwrap();
         let now = turn_epoch + 100; // 100s after the turn
         let s = sess(&format!(
-            r#"{{"session_id":"h1","transcript_path":"{}",
+            r#"{{"session_id":"h1","transcript_path":{},
             "context_window":{{"current_usage":{{"cache_read_input_tokens":100}}}}}}"#,
-            tp.display()
+            // JSON-escape the path: Windows backslashes (C:\Users\…) are invalid escapes raw.
+            serde_json::to_string(&tp.to_string_lossy()).unwrap()
         ));
         // Prime last_tokens to match s.tokens_used so turn detection does NOT fire this
         // poll (tokenline.sh:185 fires on a *change*; a truly first-ever poll would stamp
