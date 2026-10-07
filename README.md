@@ -56,7 +56,7 @@ The check is a single `GET` to `registry.npmjs.org` for the version number, made
 
 ![Tokenline Preview](https://raw.githubusercontent.com/inbrace-tech/tokenline/main/assets/tokenline.png)
 
-- **Line 1** — model · context used (tokens + %) · cache TTL with a live HOT→COLD countdown.
+- **Line 1** — model · reasoning effort (the session's current level, coloured from green at `low`/`medium` to red at `max`, and updated when you change it with `/effort`) · context used (tokens + %) · cache TTL with a live HOT→COLD countdown.
 - **Line 2** — per-turn token economics: `read / write / new / output`, the equivalent billed tokens (`eq`), and the **`saving %`** you get from prompt caching.
 - **Line 3** — 5h and 7d rate-limit bars with reset ETA and a **pace marker** (`!!` = you're burning the window faster than it refills).
 
