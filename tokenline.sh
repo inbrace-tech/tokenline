@@ -4,7 +4,7 @@
 # tokenline — a cache-aware statusline for AI coding CLIs
 #
 # Cross-CLI (Claude Code, Antigravity) and cross-provider (Anthropic, Gemini).
-# Renders: model · context · cache TTL (HOT/COLD) · per-turn token economics
+# Renders: model · effort · context · cache TTL (HOT/COLD) · per-turn token economics
 # (read / write / new / output / eq / saving %) · 5h + 7d rate-limit pacing.
 #
 # Repo:     https://github.com/inbrace-tech/tokenline
@@ -116,7 +116,8 @@ parse_and_prepare_paths() {
     (.context_window.current_usage.output_tokens // 0),
     (.context_window.current_usage.cache_creation_input_tokens // 0),
     (.context_window.current_usage.cache_read_input_tokens // 0),
-    (.model.id // "")' 2>/dev/null)
+    (.model.id // ""),
+    (.effort.level // "")' 2>/dev/null)
 
   # Malformed or empty stdin: jq emits nothing, so the array is empty. Degrade to
   # a silent no-op render rather than leaking parse errors or rendering garbage —
@@ -137,6 +138,7 @@ parse_and_prepare_paths() {
   cur_cwrite="${_f[11]}"
   cur_cread="${_f[12]}"
   model_id="${_f[13]}"
+  effort_level="${_f[14]}"
 
   # Computed: total input-only tokens used in the current context window
   tokens_used=$((cur_input + cur_cwrite + cur_cread))
@@ -331,6 +333,24 @@ compute_context_info() {
       ctx_info=$(printf '%sctx: %s%s%s%%%s' "$COLOR_GRAY" "$COLOR_RESET" "$ctx_color" "$pct" "$COLOR_RESET")
     fi
   fi
+}
+
+# --- 4b. Reasoning Effort ---
+compute_effort_info() {
+  # Claude Code sends the live session effort (it follows a mid-session /effort)
+  # and omits it for models without the effort parameter. Coloured by level so
+  # an effort left raised after a hard step stands out.
+  effort_info=""
+  [[ "$effort_level" =~ ^[A-Za-z0-9_-]+$ ]] || return 0
+  local effort_color
+  case "$effort_level" in
+    low|medium) effort_color="$COLOR_GREEN" ;;
+    high)       effort_color="$COLOR_YELLOW" ;;
+    xhigh)      effort_color="$COLOR_ORANGE" ;;
+    max)        effort_color="$COLOR_RED" ;;
+    *)          effort_color="$COLOR_GRAY" ;;
+  esac
+  effort_info=$(printf '%seffort: %s%s%s' "$COLOR_GRAY" "$effort_color" "$effort_level" "$COLOR_RESET")
 }
 
 # --- 5. Rate Limit Windows Heuristics and Bars ---
@@ -559,6 +579,8 @@ render_statusline() {
     display_header="${model}"
   fi
 
+  [ -n "$effort_info" ] && display_header="$display_header · $effort_info"
+
   local line1="$display_header"
   [ -n "$ctx_info" ]   && line1="$line1 | $ctx_info"
   [ -n "$cache_info" ] && line1="$line1 | $cache_info"
@@ -587,6 +609,7 @@ render_statusline() {
 parse_and_prepare_paths
 compute_cache_timer
 compute_context_info
+compute_effort_info
 compute_rate_limits
 compute_turn_breakdown
 compute_update_notice
