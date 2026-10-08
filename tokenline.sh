@@ -166,15 +166,17 @@ parse_and_prepare_paths() {
   fi
 
   # Cache hits bill at 0.1x base input, except Claude Fable 5.1 / Mythos 5.1 (0.025x)
-  # and Claude Opus 5.5 (0.05x). Match the API id (claude-fable-5-1[1m]) or the
-  # display name (Fable 5.1) so either field alone is enough. Pin the full version:
-  # claude-opus-5 must stay 0.1x, and a later version's price is confirmed, not guessed.
+  # and Claude Opus 5.5 / Sonnet 5.5 (0.05x). Claude Haiku 5.5 is confirmed at 0.1x in
+  # both of its prompt-length price tiers. Match the API id (claude-fable-5-1[1m]) or
+  # the display name (Fable 5.1) so either field alone is enough. Pin the full version:
+  # claude-opus-5 / claude-sonnet-5 must stay 0.1x, and a later version's price is
+  # confirmed, not guessed.
   claude_read_mult="0.1"
   local fable_re='(fable|mythos)[- ]5[-.]1([^0-9]|$)'
-  local opus_re='opus[- ]5[-.]5([^0-9]|$)'
+  local half_re='(opus|sonnet)[- ]5[-.]5([^0-9]|$)'
   if [[ "${model_id,,}" =~ $fable_re ]] || [[ "${model,,}" =~ $fable_re ]]; then
     claude_read_mult="0.025"
-  elif [[ "${model_id,,}" =~ $opus_re ]] || [[ "${model,,}" =~ $opus_re ]]; then
+  elif [[ "${model_id,,}" =~ $half_re ]] || [[ "${model,,}" =~ $half_re ]]; then
     claude_read_mult="0.05"
   fi
 
