@@ -1,5 +1,15 @@
 # @inbrace-tech/tokenline
 
+## 1.5.0
+
+### Minor Changes
+
+- feat: show the session's current reasoning effort next to the model (e.g. `Sonnet 5.5 · effort: medium`), coloured by level and following a mid-session `/effort` change. ([#125](https://github.com/inbrace-tech/tokenline/pull/125) by [@ropdias](https://github.com/ropdias))
+
+### Patch Changes
+
+- fix: bill cache reads at 0.05x on Claude Sonnet 5.5, so its per-turn `eq` and `saving %` match the official price; Claude Haiku 5.5 is confirmed at the standard 0.1x. ([#126](https://github.com/inbrace-tech/tokenline/pull/126) by [@ropdias](https://github.com/ropdias))
+
 ## 1.4.0
 
 ### Minor Changes
