@@ -1,9 +1,11 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import {
+  backup,
   describeCommand,
+  isTokenlineCommand,
   planSubagentStatusLine,
   readSettings,
   removeTokenlineBlocks,
@@ -158,6 +160,35 @@ describe('describeCommand', () => {
     'falls back for a malformed block (%j)',
     (block) => {
       expect(describeCommand(block)).toBe('no command')
+    },
+  )
+})
+
+describe('backup', () => {
+  it('copies the file to <file>.bak and returns that path', () => {
+    const file = join(dir, 'settings.json')
+    writeFileSync(file, '{"theme":"dark"}')
+
+    const bak = backup(file)
+
+    expect(bak).toBe(`${file}.bak`)
+    expect(readFileSync(bak, 'utf8')).toBe('{"theme":"dark"}')
+    expect(readFileSync(file, 'utf8')).toBe('{"theme":"dark"}')
+  })
+})
+
+describe('isTokenlineCommand', () => {
+  it.each([
+    'bash /home/u/.claude/tokenline.sh',
+    'bash "/My Drive/tokenline.sh"',
+  ])('matches a tokenline command (%s)', (cmd) => {
+    expect(isTokenlineCommand(cmd)).toBe(true)
+  })
+
+  it.each([[undefined], [''], ['bash other.sh']])(
+    'rejects a missing, empty or foreign command (%j)',
+    (cmd) => {
+      expect(isTokenlineCommand(cmd)).toBe(false)
     },
   )
 })
