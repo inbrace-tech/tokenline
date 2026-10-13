@@ -1,5 +1,23 @@
 # @inbrace-tech/tokenline
 
+## 1.5.0
+
+### Minor Changes
+
+- feat: show the session's current reasoning effort next to the model (e.g. `Sonnet 5.5 · effort: medium`), coloured by level and following a mid-session `/effort` change. ([#125](https://github.com/inbrace-tech/tokenline/pull/125) by [@ropdias](https://github.com/ropdias))
+
+- Subagent rows in Claude Code's agent panel, each with its own cache countdown and the tool it waits on; `init` wires `subagentStatusLine` (`--no-subagents` to skip). ([#116](https://github.com/inbrace-tech/tokenline/pull/116) by [@ropdias](https://github.com/ropdias))
+
+### Patch Changes
+
+- fix: bill cache reads at 0.05x and output at 5x on Gemini 4 Argon, so its per-turn `eq` and `saving %` match the official price; other Gemini models keep 0.25x / 4x. ([#130](https://github.com/inbrace-tech/tokenline/pull/130) by [@ropdias](https://github.com/ropdias))
+
+- fix: bill cache reads at 0.05x on Claude Sonnet 5.5, so its per-turn `eq` and `saving %` match the official price; Claude Haiku 5.5 is confirmed at the standard 0.1x. ([#126](https://github.com/inbrace-tech/tokenline/pull/126) by [@ropdias](https://github.com/ropdias))
+
+- `init` repoints a tokenline `subagentStatusLine` that runs the script from another path instead of keeping it, and `doctor` no longer prints `undefined` for a `subagentStatusLine` without a `command`. ([#116](https://github.com/inbrace-tech/tokenline/pull/116) by [@ropdias](https://github.com/ropdias))
+
+- `update` now tells a Claude Code install without subagent rows the exact `init` command that turns them on, keeping its `--dir`. ([#116](https://github.com/inbrace-tech/tokenline/pull/116) by [@ropdias](https://github.com/ropdias))
+
 ## 1.4.0
 
 ### Minor Changes
