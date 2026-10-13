@@ -1,0 +1,64 @@
+# Path → label mapping for .github/workflows/labeler.yml (actions/labeler v5+
+# syntax). Every label here must already exist in the repo; the action only
+# adds labels, it never creates or removes them. Read from the base branch, so
+# a PR cannot change its own labelling rules.
+
+area:statusline:
+  - changed-files:
+      - any-glob-to-any-file:
+          - tokenline.sh
+          # Specs that drive the real tokenline.sh.
+          - src/statusline.spec.ts
+          - src/infra/subagent-rows.spec.ts
+
+area:installer:
+  - changed-files:
+      - any-glob-to-any-file:
+          - install.sh
+          - package.json
+          - tsup.config.ts
+          - tsconfig.json
+  # Installer sources, minus the specs above that test the statusline.
+  - changed-files:
+      - all-globs-to-any-file:
+          - src/**
+          - '!src/statusline.spec.ts'
+          - '!src/infra/subagent-rows.spec.ts'
+
+area:tooling:
+  - changed-files:
+      - any-glob-to-any-file:
+          - .github/workflows/**
+          - .github/actions/**
+          - .github/dependabot.yml
+          - .github/labeler.yml
+          - scripts/**
+          - .claude/**
+          - .changeset/config.json
+          - eslint.config.mjs
+          - vitest.config.ts
+          - tsconfig.eslint.json
+          - .prettierrc
+          - .nvmrc
+          - pnpm-workspace.yaml
+          - .vscode/**
+
+area:meta:
+  - changed-files:
+      - any-glob-to-any-file:
+          - .github/ISSUE_TEMPLATE/**
+          - .github/PULL_REQUEST_TEMPLATE.md
+          - .github/CODEOWNERS
+          - README.md
+          - CONTRIBUTING.md
+          - AGENTS.md
+          - CLAUDE.md
+          - CODE_OF_CONDUCT.md
+          - SECURITY.md
+          - LICENSE
+
+testing:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '**/*.spec.ts'
+          - '**/*.spec.mts'

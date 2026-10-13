@@ -1,6 +1,6 @@
 name: Bug report
 description: Something in the statusline renders wrong or breaks
-labels: [bug]
+type: Bug
 body:
   - type: textarea
     id: what-happened
