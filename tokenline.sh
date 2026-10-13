@@ -165,6 +165,15 @@ parse_and_prepare_paths() {
     is_gemini=true
   fi
 
+  # Gemini 4 Argon bills cache hits at 0.05x base input and output at 5x (the same
+  # ratios at the introductory and the regular price). Match the API id
+  # (gemini-4-argon) or a display name containing Argon; other Gemini models keep
+  # 0.25x / 4x.
+  is_gemini_argon=false
+  if [ "$is_gemini" = true ] && { [[ "${model_id,,}" == *argon* ]] || [[ "${model,,}" == *argon* ]]; }; then
+    is_gemini_argon=true
+  fi
+
   # Cache hits bill at 0.1x base input, except Claude Fable 5.1 / Mythos 5.1 (0.025x)
   # and Claude Opus 5.5 / Sonnet 5.5 (0.05x). Claude Haiku 5.5 is confirmed at 0.1x in
   # both of its prompt-length price tiers. Match the API id (claude-fable-5-1[1m]) or
@@ -457,6 +466,10 @@ compute_turn_breakdown() {
       write_mult="1.0"
       input_mult="1"
       output_mult="4"
+      if [ "$is_gemini_argon" = true ]; then
+        read_mult="0.05"
+        output_mult="5"
+      fi
     else
       read_mult="$claude_read_mult"
       write_mult="1.25"
