@@ -36,7 +36,7 @@ afterEach(() => {
   rmSync(dir, { recursive: true, force: true })
 })
 
-// 70s ago, written as Antigravity does (`2026-05-20T18:46:26Z`: no fraction).
+// 70s ago, written as Antigravity does (`2026-01-02T03:04:05Z`: no fraction).
 const turnAt = (): Date => new Date((Math.floor(Date.now() / 1000) - 70) * 1000)
 const antigravityIso = (d: Date): string =>
   d.toISOString().replace(/\.\d{3}Z$/, 'Z')
