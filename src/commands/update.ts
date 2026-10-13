@@ -3,8 +3,9 @@ import { existsSync } from 'node:fs'
 import { settingsTarget } from '../core/paths'
 import { readSettings } from '../core/settings'
 import { scriptPathFromCommand, updateCommand } from '../core/stamp'
+import { subagentRowsHint } from '../core/upgrade'
 import { writeStampedScript } from '../infra/script'
-import { bold, err, green, step } from '../shared/logger'
+import { bold, err, green, step, warn } from '../shared/logger'
 import type { Options } from '../shared/types'
 
 // Overwrites the installed tokenline.sh with this package's version. The
@@ -28,8 +29,11 @@ export function cmdUpdate(opts: Options, version: string): void {
     return
   }
 
+  const hint = subagentRowsHint(s.data, opts, scriptPath)
+
   if (opts.dryRun) {
     step(`[dry-run] would overwrite ${scriptPath} with v${version}`)
+    if (hint) subagentRowsNotice(hint)
     return
   }
 
@@ -37,5 +41,17 @@ export function cmdUpdate(opts: Options, version: string): void {
   step(`updated ${scriptPath} → v${version}`)
   console.log(
     `\n${green('Done.')} The statusline picks up the new version on its next refresh.\n`,
+  )
+  if (hint) subagentRowsNotice(hint)
+}
+
+// update only reads settings.json, so it can't wire subagent rows itself; it
+// names the one command that does. init is idempotent: it confirms the
+// existing statusLine and only adds subagentStatusLine.
+function subagentRowsNotice(initCmd: string): void {
+  warn('Subagent rows are available but not wired in these settings.')
+  console.log(
+    `  Each subagent in the agent panel can show its own cache countdown.\n` +
+      `  Turn them on (your statusLine stays as is):\n\n    ${initCmd}\n`,
   )
 }

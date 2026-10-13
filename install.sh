@@ -141,8 +141,14 @@ cat <<EOF
     "type": "command",
     "command": "bash $TOKENLINE",
     "refreshInterval": 1
+  },
+  "subagentStatusLine": {
+    "type": "command",
+    "command": "bash $TOKENLINE"
   }
 EOF
+printf '\nsubagentStatusLine gives each subagent in the agent panel its own cache countdown.\n'
+printf 'It is Claude Code only: leave it out for Antigravity CLI (and drop the comma above).\n'
 printf '\nThen restart Claude Code or Antigravity CLI. Enjoy your cache-aware statusline.\n\n'
 }
 

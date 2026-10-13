@@ -40,6 +40,8 @@ npx @inbrace-tech/tokenline@latest update --global   # or: update (project), upd
 
 `update` finds the script your `statusLine` points at and replaces it. It never edits `settings.json`, and there's nothing to restart.
 
+Because of that, a feature that needs a new settings key isn't switched on by `update` alone. Installed before [subagent rows](#subagent-rows-claude-code)? `update` says so and prints the one command that adds them, for the same scope and `--dir`, e.g. `npx -y @inbrace-tech/tokenline@latest init --global`. Re-running `init` is safe: it confirms your existing `statusLine` and only adds `subagentStatusLine`.
+
 You don't have to remember to check. An installed copy looks up the latest published version in the background: when you open a new session (if the last check is over an hour old), and at least every 6 hours in a long one. When a newer version exists, it adds one gray line to the statusline:
 
 ```
@@ -61,6 +63,22 @@ The check is a single `GET` to `registry.npmjs.org` for the version number, made
 - **Line 3** — 5h and 7d rate-limit bars with reset ETA and a **pace marker** (`!!` = you're burning the window faster than it refills).
 
 > Lines 2 and 3 appear only when there's something to show (a turn happened, limits exist), so the bar stays quiet when idle.
+
+### Subagent rows (Claude Code)
+
+The same script also renders Claude Code's agent panel, one row per subagent, each with **its own** cache countdown:
+
+```
+code-reviewer    ●  3m32s  ctx: 45.2k (22%)   [5m] cache: 3:28 HOT  waiting: Bash  Review the auth diff
+general-purpose  ●  15m22s ctx: 170.0k (85%)  [5m] cache: COLD      last: Read     Run the e2e suite
+Explore          ✓  1m22s  ctx: 8.0k          [5m] cache: 4:18 HOT                 Find callers
+```
+
+Subagent requests write the **5-minute** cache. That's fine while a subagent keeps working, since every turn refreshes it. But a subagent that waits (on a long test run, a slow build, a question to you) goes cold without a sound, and its next turn pays a full cache write instead of a cheap read. The row shows it: the countdown runs while `waiting: Bash` names what it's waiting on (`waiting: Bash (bg)` for a subagent idling on its own background job, which Claude Code reports as finished until the job wakes it), and an active subagent that goes cold blinks `COLD`. Finished subagents keep their countdown (they can be resumed) but never blink.
+
+The countdown tracks the subagent's **own** last request. The part of the prompt it shares with siblings on the same model (system prompt, tools) can stay warm because of them, so after a `COLD` the next turn still reads that shared part from cache and re-writes the rest: its own conversation. Claude Code refreshes the agent panel every ~5 seconds, so the countdown moves in 5-second steps.
+
+Columns: agent type · status (`●` running, `✓` done, `✗` failed, `■` stopped) · model · effort · elapsed · context · cache · last tool · description. A field Claude Code hasn't sent yet (an unresolved model, an inherited effort, no transcript before the first response) stays blank or shows `cache: --`, never a guess. On a narrow panel the description is cut first, then effort, model, context, elapsed and activity are dropped whole, in that order; type, status and cache always stay. `init` wires this in as `subagentStatusLine`; pass `--no-subagents` to skip it.
 
 ## About
 
@@ -144,8 +162,14 @@ Add the printed block to your project's `.claude/settings.json` (or `~/.claude/s
   "type": "command",
   "command": "bash /absolute/path/to/tokenline/tokenline.sh",
   "refreshInterval": 1
+},
+"subagentStatusLine": {
+  "type": "command",
+  "command": "bash /absolute/path/to/tokenline/tokenline.sh"
 }
 ```
+
+(`subagentStatusLine` is Claude Code only — leave it out for the Antigravity CLI.)
 
 Then restart Claude Code.
 
@@ -154,10 +178,10 @@ Then restart Claude Code.
 `npx @inbrace-tech/tokenline init` is deliberately transparent about touching your config:
 
 - **Writes** `tokenline.sh` to `./.claude/` (or `~/.claude/` with `--global`, or `~/.gemini/antigravity-cli/` with `--antigravity`).
-- **Merges** only the `statusLine` key into `settings.json` — every other setting is preserved.
+- **Merges** only the `statusLine` key (and, for Claude Code, `subagentStatusLine`) into `settings.json` — every other setting is preserved.
 - **Backs up** `settings.json` to `settings.json.bak` before writing.
 - **Never clobbers** invalid JSON: if it can't parse your `settings.json`, it stops and prints the block to paste manually.
-- Is **idempotent**, and won't replace a different existing `statusLine` unless you pass `--force`.
+- Is **idempotent**, and won't replace a different existing `statusLine` unless you pass `--force`. A different existing `subagentStatusLine` is kept (with a note) rather than failing the install; `--force` replaces it too.
 - **Stamps** the copy with the installed version and the command that updates it (two lines near the top of the script). The repo's own `tokenline.sh` stays unstamped.
 
 Other commands: `update` (replace the installed script, see [Updating](#updating)), `doctor` (check dependencies and config, change nothing) and `uninstall` (remove the block; `--purge` also deletes the script).
@@ -168,7 +192,7 @@ Other commands: `update` (replace the installed script, see [Updating](#updating
 
 ## How it works
 
-On every refresh the host CLI pipes a JSON snapshot of the session to the script over stdin. `tokenline` parses it in a single `jq` pass (to keep the per-second refresh cheap), reads the last turn's timestamp from the transcript to drive the cache countdown, and renders up to three lines. Per-turn timestamps are cached in a per-user `0700` directory under `$XDG_RUNTIME_DIR` (tmpfs, cleared on logout).
+On every refresh the host CLI pipes a JSON snapshot of the session to the script over stdin. `tokenline` parses it in a single `jq` pass (to keep the per-second refresh cheap), reads the last turn's timestamp from the transcript to drive the cache countdown, and renders up to three lines. Per-turn timestamps (and, for subagent rows, each subagent's last-turn time, TTL and last tool name) are cached in a per-user `0700` directory under `$XDG_RUNTIME_DIR` (tmpfs, cleared on logout); the payload itself never touches disk.
 
 ## Troubleshooting
 
