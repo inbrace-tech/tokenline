@@ -36,7 +36,23 @@ export function planSubagentStatusLine(
 ): SubagentPlan {
   if (existing === undefined) return 'add'
   if (existing.command === command) return 'confirm'
+  // A tokenline block at another path is still ours: repoint it at this script.
+  if (
+    typeof existing.command === 'string' &&
+    isTokenlineCommand(existing.command)
+  )
+    return 'replace'
   return force ? 'replace' : 'keep'
+}
+
+// How `doctor` names a settings block's command. Settings are hand-edited JSON,
+// so the block may lack `command` or not be an object at all.
+export function describeCommand(block: unknown): string {
+  if (typeof block === 'object' && block !== null && 'command' in block) {
+    const { command } = block
+    if (typeof command === 'string') return command
+  }
+  return 'no command'
 }
 
 // Removes every block tokenline owns from a parsed settings object, leaving

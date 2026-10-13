@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import {
+  describeCommand,
   planSubagentStatusLine,
   readSettings,
   removeTokenlineBlocks,
@@ -89,6 +90,16 @@ describe('planSubagentStatusLine', () => {
     ).toBe('keep')
   })
 
+  it('repoints a tokenline block at another path without --force', () => {
+    expect(
+      planSubagentStatusLine(
+        { command: 'bash /old/place/tokenline.sh' },
+        ours,
+        false,
+      ),
+    ).toBe('replace')
+  })
+
   it("replaces another tool's block with --force", () => {
     expect(
       planSubagentStatusLine({ command: 'bash other.sh' }, ours, true),
@@ -136,4 +147,17 @@ describe('removeTokenlineBlocks', () => {
       subagentStatusLine: { type: 'command', command: 'bash other.sh' },
     })
   })
+})
+
+describe('describeCommand', () => {
+  it('returns the command of a well-formed block', () => {
+    expect(describeCommand({ command: 'bash other.sh' })).toBe('bash other.sh')
+  })
+
+  it.each([[{}], [{ command: 42 }], ['bash other.sh'], [null]])(
+    'falls back for a malformed block (%j)',
+    (block) => {
+      expect(describeCommand(block)).toBe('no command')
+    },
+  )
 })

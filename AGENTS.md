@@ -28,8 +28,11 @@ bash script the single source of truth.
   dependency or malformed input, degrade gracefully (print a short hint, `exit 0`)
   — never a non-zero exit or an unhandled error.
 - **Never write session input to disk.** The stdin payload contains live session
-  state. Keep it in memory. Only the small per-turn timestamp/TTL cache is
-  persisted, under a `0700` dir in `$XDG_RUNTIME_DIR`.
+  state. Keep it in memory. Only small derived caches are persisted, under a
+  `0700` dir in `$XDG_RUNTIME_DIR`: the per-turn timestamp/TTL, and in
+  subagent mode one scan result per subagent (transcript mtime:size, last-turn
+  timestamp, TTL, last tool name, waiting mode). Never the payload or
+  transcript text itself.
 - **Keep it ShellCheck-clean.** CI runs `shellcheck -s bash` on every push.
 - **No new hard dependencies** beyond `bash` 4+, `jq`, and GNU coreutils without
   discussion. The appeal is a zero-install drop-in file.

@@ -192,7 +192,7 @@ Other commands: `update` (replace the installed script, see [Updating](#updating
 
 ## How it works
 
-On every refresh the host CLI pipes a JSON snapshot of the session to the script over stdin. `tokenline` parses it in a single `jq` pass (to keep the per-second refresh cheap), reads the last turn's timestamp from the transcript to drive the cache countdown, and renders up to three lines. Per-turn timestamps are cached in a per-user `0700` directory under `$XDG_RUNTIME_DIR` (tmpfs, cleared on logout).
+On every refresh the host CLI pipes a JSON snapshot of the session to the script over stdin. `tokenline` parses it in a single `jq` pass (to keep the per-second refresh cheap), reads the last turn's timestamp from the transcript to drive the cache countdown, and renders up to three lines. Per-turn timestamps (and, for subagent rows, each subagent's last-turn time, TTL and last tool name) are cached in a per-user `0700` directory under `$XDG_RUNTIME_DIR` (tmpfs, cleared on logout); the payload itself never touches disk.
 
 ## Troubleshooting
 

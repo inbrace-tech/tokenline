@@ -1,5 +1,9 @@
 import { settingsTarget, targetLabel } from '../core/paths'
-import { isTokenlineCommand, readSettings } from '../core/settings'
+import {
+  describeCommand,
+  isTokenlineCommand,
+  readSettings,
+} from '../core/settings'
 import { checkBash, checkJq, checkPlatform } from '../infra/system'
 import { bold, ok, step, warn } from '../shared/logger'
 import type { Target } from '../shared/types'
@@ -35,7 +39,9 @@ export function cmdDoctor(): void {
       if (isTokenlineCommand(sub?.command)) {
         ok(`${label} subagent rows: tokenline configured`)
       } else if (sub !== undefined) {
-        step(`${label} subagent rows: another command (${sub.command})`)
+        step(
+          `${label} subagent rows: another command (${describeCommand(sub)})`,
+        )
       } else if (isTokenlineCommand(s.data.statusLine?.command)) {
         step(`${label} subagent rows: not configured (re-run init to add)`)
       }
