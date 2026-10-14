@@ -91,11 +91,28 @@ file_mtime() {
 # Per-turn timestamp / TTL are cached between the 1s refreshes. Prefer a
 # per-user dir (0700) under XDG_RUNTIME_DIR: it avoids predictable, world-
 # readable paths in shared /tmp (and the symlink/collision risks they carry),
-# and is tmpfs cleared on logout — so no orphan-file cleanup is needed. Falls
-# back to /tmp when XDG_RUNTIME_DIR is unset.
-_runtime_dir="${XDG_RUNTIME_DIR:-/tmp}/tokenline-${UID:-$(id -u)}"
-mkdir -p "$_runtime_dir" 2>/dev/null && chmod 700 "$_runtime_dir" 2>/dev/null
-[ -d "$_runtime_dir" ] || _runtime_dir="/tmp"
+# and is tmpfs cleared on logout — so no orphan-file cleanup is needed.
+# XDG_RUNTIME_DIR can be unset, or set to a dir that doesn't exist (WSL2
+# without systemd, containers, su/sudo shells), so the candidates are tried in
+# order: $XDG_RUNTIME_DIR/tokenline-<uid> when that parent is a dir we own, then
+# ${TMPDIR:-/tmp}/tokenline-<uid>. Bare /tmp is the last resort, and every
+# feature that needs a private dir (update notice, subagent state) stays off there.
+_use_runtime_dir() {
+  # Accepts $1 only as a real directory (not a symlink) owned by this user,
+  # creating it 0700 when missing. No -p: the parent must already exist.
+  local d="$1"
+  [ -d "$d" ] || mkdir -m 700 "$d" 2>/dev/null
+  [ -d "$d" ] && [ ! -L "$d" ] && [ -O "$d" ] || return 1
+  chmod 700 "$d" 2>/dev/null
+  _runtime_dir="$d"
+}
+_runtime_dir="/tmp"
+_uid="${UID:-$(id -u)}"
+if ! { [ -n "${XDG_RUNTIME_DIR:-}" ] && [ -d "$XDG_RUNTIME_DIR" ] && [ -O "$XDG_RUNTIME_DIR" ] \
+    && _use_runtime_dir "${XDG_RUNTIME_DIR%/}/tokenline-$_uid"; }; then
+  _tmp_base="${TMPDIR:-/tmp}"
+  _use_runtime_dir "${_tmp_base%/}/tokenline-$_uid"
+fi
 
 # --- 1. Parse JSON Standard Input and Prepare State Variables ---
 parse_and_prepare_paths() {
