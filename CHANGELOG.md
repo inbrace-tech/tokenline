@@ -1,5 +1,11 @@
 # @inbrace-tech/tokenline
 
+## 1.5.1
+
+### Patch Changes
+
+- fix: the update notice and subagent-row state now work when `XDG_RUNTIME_DIR` points to a missing dir (WSL2 without systemd), via a private `${TMPDIR:-/tmp}/tokenline-<uid>`. ([#145](https://github.com/inbrace-tech/tokenline/pull/145) by [@ropdias](https://github.com/ropdias))
+
 ## 1.5.0
 
 ### Minor Changes
