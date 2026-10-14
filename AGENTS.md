@@ -29,7 +29,9 @@ bash script the single source of truth.
   — never a non-zero exit or an unhandled error.
 - **Never write session input to disk.** The stdin payload contains live session
   state. Keep it in memory. Only small derived caches are persisted, under a
-  `0700` dir in `$XDG_RUNTIME_DIR`: the per-turn timestamp/TTL, and in
+  `0700` dir we own in `$XDG_RUNTIME_DIR`, else `${TMPDIR:-/tmp}` (never
+  through a symlink; bare `/tmp` turns those features off): the per-turn
+  timestamp/TTL, and in
   subagent mode one scan result per subagent (transcript mtime:size, last-turn
   timestamp, TTL, last tool name, waiting mode). Never the payload or
   transcript text itself.
