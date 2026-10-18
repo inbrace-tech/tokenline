@@ -14,6 +14,12 @@
 #                                 # change it). Re-running it updates in place.
 #   ./install.sh --theme minimal  # the snippet with a layout preset; piped:
 #                                 # curl … | bash -s -- --theme minimal
+#
+# Scope: this is the no-Node path, and it stays thin on purpose. It fetches
+# tokenline.sh, checks dependencies and PRINTS the snippet; it never edits
+# settings.json. Settings patching, profile selection and install-time options
+# belong in the npm CLI (src/), which owns that tested safety contract — two
+# copies of it would drift. See CONTRIBUTING.md › "Where does my change go?".
 # ==============================================================================
 set -euo pipefail
 

@@ -3,6 +3,22 @@
 Thanks for your interest in improving `tokenline`! This is a small, focused project,
 so contributing is straightforward.
 
+## Open an issue first for features
+
+Bug fixes, typos and docs: send the PR directly. For a **new feature or a change in
+behavior** — a new output, a new flag, anything about how tokenline is installed —
+please open an issue first (the feature request template is there for this), so we
+can agree on the approach before you write the code. It costs five minutes and can
+save you hours on a design we couldn't merge.
+
+## Where does my change go?
+
+| You want to change… | It goes in | Notes |
+| --- | --- | --- |
+| What the statusline shows or computes | `tokenline.sh` | The product. Runs every second; see the ground rules below. |
+| How tokenline is installed or configured (settings patching, profiles, install-time options) | the npm CLI, `src/` | Owns the safety contract: backup, merge-only, idempotent, never clobbers invalid JSON. |
+| The no-Node bootstrap | `install.sh` | Stays thin by design: fetches `tokenline.sh`, checks dependencies, **prints** the settings snippet. It never edits `settings.json` — that logic lives once, in the CLI. |
+
 ## Ground rules
 
 - **Keep it lint-clean.** CI runs [ShellCheck](https://www.shellcheck.net/) on every
