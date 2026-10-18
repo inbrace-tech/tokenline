@@ -8,6 +8,9 @@ applicable — empty optional sections read as oversight, not intent.
 <!-- One paragraph or 2–3 bullets: what changed and why.
      If this PR closes an issue, open with: Closes #<issue-number>. -->
 
+- [ ] A new feature or behavior change links the issue where the approach was agreed (bug fixes and docs can skip this)
+- [ ] The change sits where CONTRIBUTING.md › "Where does my change go?" puts it
+
 ## Test plan
 
 - [ ] `shellcheck -s bash tokenline.sh install.sh` is clean
