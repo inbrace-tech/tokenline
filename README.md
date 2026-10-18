@@ -30,17 +30,55 @@ npx @inbrace-tech/tokenline init --antigravity
 
 Simply restart Claude Code or Antigravity, and your new statusline will be live.
 
+### Updating
+
+The installed `tokenline.sh` is a copy, so it stays on the version you installed until you update it. Use the same scope flag you installed with:
+
+```bash
+npx @inbrace-tech/tokenline@latest update --global   # or: update (project), update --antigravity
+```
+
+`update` finds the script your `statusLine` points at and replaces it. It never edits `settings.json`, and there's nothing to restart.
+
+Because of that, a feature that needs a new settings key isn't switched on by `update` alone. Installed before [subagent rows](#subagent-rows-claude-code)? `update` says so and prints the one command that adds them, for the same scope and `--dir`, e.g. `npx -y @inbrace-tech/tokenline@latest init --global`. Re-running `init` is safe: it confirms your existing `statusLine` and only adds `subagentStatusLine`.
+
+You don't have to remember to check. An installed copy looks up the latest published version in the background: when you open a new session (if the last check is over an hour old), and at least every 6 hours in a long one. When a newer version exists, it adds one gray line to the statusline:
+
+```
+↑ tokenline 1.4.0 available · update: ! npx -y @inbrace-tech/tokenline@latest update --global
+```
+
+In Claude Code, type that line (with the leading `!`) at the prompt to run it without leaving the session. The next refresh shows the new version.
+
+The check is a single `GET` to `registry.npmjs.org` for the version number, made only if `curl` is installed. It runs detached, so rendering never waits on the network. Nothing about your session is sent, and nothing downloaded is executed: only a plain `x.y.z` version is accepted and shown. To turn it off, set `TOKENLINE_NO_UPDATE_CHECK=1` (`DO_NOT_TRACK=1` works too).
+
 ---
 
 ## Preview
 
 ![Tokenline Preview](https://raw.githubusercontent.com/inbrace-tech/tokenline/main/assets/tokenline.png)
 
-- **Line 1** — model · context used (tokens + %) · cache TTL with a live HOT→COLD countdown.
+- **Line 1** — model · reasoning effort (the session's current level, coloured from green at `low`/`medium` to red at `max`, and updated when you change it with `/effort`) · context used (tokens + %) · cache TTL with a live HOT→COLD countdown.
 - **Line 2** — per-turn token economics: `read / write / new / output`, the equivalent billed tokens (`eq`), and the **`saving %`** you get from prompt caching.
 - **Line 3** — 5h and 7d rate-limit bars with reset ETA and a **pace marker** (`!!` = you're burning the window faster than it refills).
 
 > Lines 2 and 3 appear only when there's something to show (a turn happened, limits exist), so the bar stays quiet when idle.
+
+### Subagent rows (Claude Code)
+
+The same script also renders Claude Code's agent panel, one row per subagent, each with **its own** cache countdown:
+
+```
+code-reviewer    ●  3m32s  ctx: 45.2k (22%)   [5m] cache: 3:28 HOT  waiting: Bash  Review the auth diff
+general-purpose  ●  15m22s ctx: 170.0k (85%)  [5m] cache: COLD      last: Read     Run the e2e suite
+Explore          ✓  1m22s  ctx: 8.0k          [5m] cache: 4:18 HOT                 Find callers
+```
+
+Subagent requests write the **5-minute** cache. That's fine while a subagent keeps working, since every turn refreshes it. But a subagent that waits (on a long test run, a slow build, a question to you) goes cold without a sound, and its next turn pays a full cache write instead of a cheap read. The row shows it: the countdown runs while `waiting: Bash` names what it's waiting on (`waiting: Bash (bg)` for a subagent idling on its own background job, which Claude Code reports as finished until the job wakes it), and an active subagent that goes cold blinks `COLD`. Finished subagents keep their countdown (they can be resumed) but never blink.
+
+The countdown tracks the subagent's **own** last request. The part of the prompt it shares with siblings on the same model (system prompt, tools) can stay warm because of them, so after a `COLD` the next turn still reads that shared part from cache and re-writes the rest: its own conversation. Claude Code refreshes the agent panel every ~5 seconds, so the countdown moves in 5-second steps.
+
+Columns: agent type · status (`●` running, `✓` done, `✗` failed, `■` stopped) · model · effort · elapsed · context · cache · last tool · description. A field Claude Code hasn't sent yet (an unresolved model, an inherited effort, no transcript before the first response) stays blank or shows `cache: --`, never a guess. On a narrow panel the description is cut first, then effort, model, context, elapsed and activity are dropped whole, in that order; type, status and cache always stay. `init` wires this in as `subagentStatusLine`; pass `--no-subagents` to skip it.
 
 ## About
 
@@ -67,7 +105,7 @@ LLMs are stateless — by default, they must reread your entire codebase context
 
 **Prompt Caching** solves this by saving that processed state in the provider's memory:
 - **Cache Write (Cold):** The model reads everything and stores the state. This costs slightly more than base tokens.
-- **Cache Hit (Warm):** If your prompt prefix matches the cached state exactly, the model skips the reading phase. This is **~90% cheaper** and starts responding almost instantly.
+- **Cache Hit (Warm):** If your prompt prefix matches the cached state exactly, the model skips the reading phase. This is **~90% cheaper** (**97.5%** on Claude Fable 5.1 / Mythos 5.1, which bill cache hits at 0.025x base input, and **95%** on Claude Opus 5.5 and Claude Sonnet 5.5 at 0.05x; Claude Haiku 5.5 keeps the standard 0.1x; Gemini 4 Argon bills cache hits at 0.05x too, against 0.25x on other Gemini models) and starts responding almost instantly. `tokenline` picks the right multiplier from the active model.
 - **TTL (Time-To-Live):** The cache operates as a **sliding window**. Every cache hit resets the countdown to its full duration for free. The secret to minimizing rate-limit drain is adjusting your workflow pace to keep the cache continuously **HOT**.
 
 ### 💡 Pro-tip: Forcing a 5m TTL to save rate limits
@@ -97,12 +135,19 @@ On macOS: `brew install bash jq`. BSD `date`/`stat` work as-is; no `coreutils` n
 
 ## Advanced Installation
 
+### Without Node (curl)
+
+No Node? Download the latest release's `tokenline.sh` to `~/.claude/` in one line:
+
+```bash
+curl -fsSL https://github.com/inbrace-tech/tokenline/releases/latest/download/install.sh | bash
+```
+
+It checks the dependencies and prints the `statusLine` block to paste into `settings.json` (see below). Run the same command again to update; once the block is in place, there's nothing else to do. Set `TOKENLINE_DIR` to install somewhere else, e.g. `TOKENLINE_DIR=~/.gemini/antigravity-cli` for the Antigravity CLI.
+
 ### Without Node (clone + install.sh)
 
-No Node? Clone the repo and run the installer. It checks dependencies, then
-copies `tokenline.sh` into the profile(s) you pick and patches each
-`settings.json` with the same safety contract as the npm CLI (backup,
-merge-only, idempotent, never clobbers invalid JSON):
+Prefer a clone? Run the dependency checker, which prints a ready-to-paste snippet:
 
 ```bash
 git clone https://github.com/inbrace-tech/tokenline.git
@@ -110,19 +155,21 @@ cd tokenline
 ./install.sh
 ```
 
-It first asks you to pick a [theme](#themes), then discovers your Claude profile
-directories (`~/.claude`, any `~/.claude-*`, and `./.claude`) and lets you
-install into one or several at once — handy if you run multiple profiles. Use
-↑/↓ and space to choose; `~/.claude` is the default.
+Add the printed block to your project's `.claude/settings.json` (or `~/.claude/settings.json` for global), inside the top-level object:
 
-```bash
-./install.sh --theme minimal        # skip the theme prompt
-./install.sh --dir ~/.claude-work   # install into a specific directory
-./install.sh --yes                  # non-interactive, install into ~/.claude
-./install.sh --dry-run              # show what would happen, write nothing
-./install.sh --print                # just print the snippet to paste manually
-./install.sh --force                # replace a different existing statusLine
+```json
+"statusLine": {
+  "type": "command",
+  "command": "bash /absolute/path/to/tokenline/tokenline.sh",
+  "refreshInterval": 1
+},
+"subagentStatusLine": {
+  "type": "command",
+  "command": "bash /absolute/path/to/tokenline/tokenline.sh"
+}
 ```
+
+(`subagentStatusLine` is Claude Code only — leave it out for the Antigravity CLI.)
 
 Then restart Claude Code.
 
@@ -147,12 +194,13 @@ An unknown theme name falls back to `full`, so a typo never blanks the line.
 `npx @inbrace-tech/tokenline init` is deliberately transparent about touching your config:
 
 - **Writes** `tokenline.sh` to `./.claude/` (or `~/.claude/` with `--global`, or `~/.gemini/antigravity-cli/` with `--antigravity`).
-- **Merges** only the `statusLine` key into `settings.json` — every other setting is preserved.
+- **Merges** only the `statusLine` key (and, for Claude Code, `subagentStatusLine`) into `settings.json` — every other setting is preserved.
 - **Backs up** `settings.json` to `settings.json.bak` before writing.
 - **Never clobbers** invalid JSON: if it can't parse your `settings.json`, it stops and prints the block to paste manually.
-- Is **idempotent**, and won't replace a different existing `statusLine` unless you pass `--force`.
+- Is **idempotent**, and won't replace a different existing `statusLine` unless you pass `--force`. A different existing `subagentStatusLine` is kept (with a note) rather than failing the install; `--force` replaces it too.
+- **Stamps** the copy with the installed version and the command that updates it (two lines near the top of the script). The repo's own `tokenline.sh` stays unstamped.
 
-Other commands: `doctor` (check dependencies and config, change nothing) and `uninstall` (remove the block; `--purge` also deletes the script).
+Other commands: `update` (replace the installed script, see [Updating](#updating)), `doctor` (check dependencies and config, change nothing) and `uninstall` (remove the block; `--purge` also deletes the script).
 
 ### Antigravity CLI
 
@@ -160,7 +208,7 @@ Other commands: `doctor` (check dependencies and config, change nothing) and `un
 
 ## How it works
 
-On every refresh the host CLI pipes a JSON snapshot of the session to the script over stdin. `tokenline` parses it in a single `jq` pass (to keep the per-second refresh cheap), reads the last turn's timestamp from the transcript to drive the cache countdown, and renders up to three lines. Per-turn timestamps are cached in a per-user `0700` directory under `$XDG_RUNTIME_DIR` (tmpfs, cleared on logout).
+On every refresh the host CLI pipes a JSON snapshot of the session to the script over stdin. `tokenline` parses it in a single `jq` pass (to keep the per-second refresh cheap), reads the last turn's timestamp from the transcript to drive the cache countdown, and renders up to three lines. Per-turn timestamps (and, for subagent rows, each subagent's last-turn time, TTL and last tool name) are cached in a per-user `0700` directory under `$XDG_RUNTIME_DIR` (tmpfs, cleared on logout), or under `$TMPDIR` / `/tmp` when that is unset or doesn't exist (WSL2 without systemd, containers, macOS); the payload itself never touches disk.
 
 ## Troubleshooting
 

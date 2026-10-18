@@ -9,6 +9,7 @@
 //   npx @inbrace-tech/tokenline init              # install into ./.claude (project)
 //   npx @inbrace-tech/tokenline init --global     # install into ~/.claude (global)
 //   npx @inbrace-tech/tokenline init --antigravity # install into ~/.gemini/antigravity-cli
+//   npx @inbrace-tech/tokenline@latest update --global # refresh the installed script
 //   npx @inbrace-tech/tokenline doctor            # check deps, change nothing
 //   npx @inbrace-tech/tokenline uninstall         # remove the statusLine block
 //
@@ -22,64 +23,13 @@ import { join } from 'node:path'
 import { cmdDoctor } from './commands/doctor'
 import { cmdInit } from './commands/init'
 import { cmdUninstall } from './commands/uninstall'
+import { cmdUpdate } from './commands/update'
+import { parseArgs } from './core/args'
 import { bold, err, warn } from './shared/logger'
-import type { Options } from './shared/types'
 
 const PKG = JSON.parse(
   readFileSync(join(__dirname, '..', 'package.json'), 'utf8'),
 ) as { version: string }
-
-// --- Argument parsing (no deps) ----------------------------------------------
-function parseArgs(argv: string[]): Options {
-  const out: Options = {
-    _: [],
-    targetCli: 'claude',
-    dir: null,
-    global: false,
-    dryRun: false,
-    force: false,
-    purge: false,
-    help: false,
-    version: false,
-    unknown: [],
-  }
-  for (let i = 0; i < argv.length; i++) {
-    const a = argv[i]
-    switch (a) {
-      case '--dir':
-        out.dir = argv[++i] ?? null
-        break
-      case '--antigravity':
-        out.targetCli = 'antigravity'
-        out.global = true
-        break
-      case '--global':
-        out.global = true
-        break
-      case '--dry-run':
-        out.dryRun = true
-        break
-      case '--force':
-        out.force = true
-        break
-      case '--purge':
-        out.purge = true
-        break
-      case '-h':
-      case '--help':
-        out.help = true
-        break
-      case '-v':
-      case '--version':
-        out.version = true
-        break
-      default:
-        if (a !== undefined && a.startsWith('-')) out.unknown.push(a)
-        else if (a !== undefined) out._.push(a)
-    }
-  }
-  return out
-}
 
 function help(): void {
   console.log(`
@@ -90,8 +40,9 @@ ${bold('Usage')}
 
 ${bold('Commands')}
   init          Install tokenline.sh and wire it into settings
+  update        Replace the installed tokenline.sh with this version (run it as @latest)
   doctor        Check dependencies and current config — changes nothing
-  uninstall     Remove the tokenline statusLine block from settings
+  uninstall     Remove the tokenline blocks (statusLine, subagentStatusLine) from settings
 
 ${bold('Options')}
   --antigravity Target Antigravity CLI (~/.gemini/antigravity-cli)
@@ -100,6 +51,7 @@ ${bold('Options')}
   --dry-run     Show what would happen without writing anything
   --force       Proceed on an unsupported platform / replace an existing statusLine
   --purge       (uninstall) also delete the installed tokenline.sh
+  --no-subagents (init) skip the per-subagent cache rows in the agent panel
   -h, --help    Show this help
   -v, --version Show version
 
@@ -126,7 +78,10 @@ function main(): void {
   try {
     switch (opts._[0]) {
       case 'init':
-        cmdInit(opts)
+        cmdInit(opts, PKG.version)
+        break
+      case 'update':
+        cmdUpdate(opts, PKG.version)
         break
       case 'doctor':
         cmdDoctor()

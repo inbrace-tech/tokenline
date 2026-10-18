@@ -1,0 +1,39 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# PR labeler — applies area:/testing labels from the paths a PR changes, using
+# the mapping in .github/labeler.yml.
+#
+# Why pull_request_target: a PR opened from a fork gets a read-only token under
+# `pull_request`, so it could never label itself (and fork contributors have no
+# permission to add labels by hand). `pull_request_target` runs in the base
+# repo's context with a token that can write labels.
+#
+# SECURITY — that write token is why this workflow must stay this small:
+#   - NEVER add actions/checkout of the PR head, or any step that builds, runs,
+#     or installs the PR's code. Under this trigger that would hand the write
+#     token to untrusted code.
+#   - actions/labeler reads .github/labeler.yml from the BASE branch and only
+#     the PR's changed-file list via the API; it executes nothing from the PR.
+#   - No secrets beyond the per-run GITHUB_TOKEN, scoped to the minimum below.
+# ─────────────────────────────────────────────────────────────────────────────
+name: PR labeler
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize]
+    branches: [main]
+
+# Nothing at workflow level; the one job asks for exactly what it needs.
+permissions: {}
+
+jobs:
+  label:
+    name: Label by changed paths
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      # sync-labels stays false (default): labels are only added, never
+      # removed, so a label a maintainer applied by hand is left alone.
+      - uses: actions/labeler@bf12e9b00b37c5c0ca2b87b79b2daf7891dbda13 # v7.0.0

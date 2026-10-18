@@ -1,6 +1,6 @@
 {
   "name": "@inbrace-tech/tokenline",
-  "version": "1.2.1",
+  "version": "1.5.2",
   "description": "A cache-aware statusline for AI coding CLIs — installs tokenline.sh and wires it into your Claude Code settings.",
   "bin": {
     "tokenline": "dist/cli.js"
@@ -12,17 +12,19 @@
   "engines": {
     "node": ">=18"
   },
-  "packageManager": "pnpm@11.5.3",
+  "packageManager": "pnpm@11.5.3+sha512.7ac1c919341c213a34dc0d02afb7143c5c26ac26ee8c4782deea821b8ac64d2134a081fd8941dae6e29bbb48f58dfc2b7fbceeccc07cb2f09d219d342a4969ed",
   "scripts": {
     "build": "tsup",
-    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p scripts/tsconfig.json",
     "lint": "eslint . --cache --cache-location node_modules/.cache/.eslintcache --fix",
     "format": "prettier --write \"src/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\"",
     "test": "vitest run",
+    "audit:lockfile": "node --experimental-strip-types scripts/check-lockfile-release-age.mts",
     "test:watch": "vitest",
     "prepack": "pnpm build",
     "changeset": "changeset",
+    "changeset:check": "node --experimental-strip-types scripts/check-changeset-size.mts",
     "release": "pnpm build && changeset publish"
   },
   "keywords": [
@@ -50,20 +52,21 @@
     "access": "public"
   },
   "devDependencies": {
-    "@changesets/cli": "^2.31.0",
+    "@changesets/changelog-github": "1.0.1",
+    "@changesets/cli": "^3.0.2",
     "@eslint/js": "10.0.1",
-    "@types/node": "24.13.3",
-    "@vitest/eslint-plugin": "1.6.23",
-    "eslint": "10.7.0",
+    "@types/node": "24.19.2",
+    "@vitest/eslint-plugin": "1.6.27",
+    "eslint": "10.12.0",
     "eslint-config-prettier": "10.1.8",
-    "eslint-plugin-n": "18.2.2",
+    "eslint-plugin-n": "18.4.1",
     "eslint-plugin-prettier": "5.5.6",
     "eslint-plugin-simple-import-sort": "13.0.0",
-    "globals": "17.7.0",
-    "prettier": "3.9.5",
+    "globals": "17.13.0",
+    "prettier": "3.9.10",
     "tsup": "^8.5.1",
     "typescript": "5.9.3",
-    "typescript-eslint": "8.64.0",
-    "vitest": "4.1.10"
+    "typescript-eslint": "8.71.1",
+    "vitest": "4.1.11"
   }
 }

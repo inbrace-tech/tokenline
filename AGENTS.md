@@ -9,6 +9,12 @@ Antigravity). The host CLI pipes a JSON snapshot of the session to the script on
 stdin once per second; the script prints up to three lines (model/context/cache,
 per-turn token economics, rate limits).
 
+The same file also renders Claude Code's agent panel when it is wired as
+`subagentStatusLine`: a payload carrying a `tasks` array switches it to one
+`{"id","content"}` JSON line per subagent, each with that subagent's own cache
+countdown read from its transcript. Test that mode by feeding such a payload
+(see `src/infra/subagent-rows.spec.ts` for a full fixture).
+
 The product is `tokenline.sh` — that's what renders every second. Two installers
 wrap it: `install.sh` (bash, no Node) prints the settings snippet, and the npm
 package `@inbrace-tech/tokenline` (a TypeScript CLI in `src/`, built to
@@ -22,8 +28,13 @@ bash script the single source of truth.
   dependency or malformed input, degrade gracefully (print a short hint, `exit 0`)
   — never a non-zero exit or an unhandled error.
 - **Never write session input to disk.** The stdin payload contains live session
-  state. Keep it in memory. Only the small per-turn timestamp/TTL cache is
-  persisted, under a `0700` dir in `$XDG_RUNTIME_DIR`.
+  state. Keep it in memory. Only small derived caches are persisted, under a
+  `0700` dir we own in `$XDG_RUNTIME_DIR`, else `${TMPDIR:-/tmp}` (never
+  through a symlink; bare `/tmp` turns those features off): the per-turn
+  timestamp/TTL, and in
+  subagent mode one scan result per subagent (transcript mtime:size, last-turn
+  timestamp, TTL, last tool name, waiting mode). Never the payload or
+  transcript text itself.
 - **Keep it ShellCheck-clean.** CI runs `shellcheck -s bash` on every push.
 - **No new hard dependencies** beyond `bash` 4+, `jq`, and GNU coreutils without
   discussion. The appeal is a zero-install drop-in file.
@@ -46,6 +57,22 @@ Strip ANSI to check structure: pipe the output through `sed 's/\x1b\[[0-9;]*m//g
 Runs on Linux / WSL2 and macOS. `date`/`stat` are abstracted over GNU vs BSD by
 probing behavior once (`epoch_from_iso`, `file_mtime` in `tokenline.sh`); `mapfile`
 still needs bash 4+, so macOS users `brew install bash`. Windows is a roadmap issue.
+
+## Changesets
+
+A user-facing change ships with a changeset, and **its summary is one line** —
+what a user receives, at most 200 characters, no line breaks. It becomes one bullet
+of `CHANGELOG.md` and of the GitHub Release, rendered by
+`@changesets/changelog-github` with a link to the pull request. Put the reasoning
+and the testing notes in the pull request body instead. `pnpm changeset:check`
+enforces it, and CI runs it.
+
+The line reads `- summary (#PR by @author)`, set by the `template` option in
+`.changeset/config.json`. That option is experimental upstream, so
+`@changesets/changelog-github` is pinned to an exact version: Dependabot still
+proposes each release, and before merging that PR, read the plugin's release
+notes for template changes. CI does not run `changeset version`, so nothing
+automated catches one.
 
 ## The npm installer
 

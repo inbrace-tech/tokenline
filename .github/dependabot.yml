@@ -1,8 +1,9 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # Dependabot — keeps the pinned GitHub Actions SHAs and the CLI's dev
 # dependencies fresh. Two ecosystems: github-actions (workflows + the composite
-# action) and npm (the pnpm-managed devDependencies for src/cli.ts). Each is
-# grouped into one weekly PR with a `chore` prefix so it passes pr-title.yml.
+# action) and npm (the pnpm-managed devDependencies for src/cli.ts). Minors and
+# patches are grouped into one weekly PR per ecosystem, with a `chore` prefix so
+# it passes pr-title.yml; an action major comes as its own PR.
 #
 # The npm group deliberately skips major bumps (see its `ignore` below): minors
 # and patches flow automatically, but taking a major (TypeScript, @types/node,
@@ -18,10 +19,24 @@ updates:
       time: "06:00"
       timezone: America/Sao_Paulo
     open-pull-requests-limit: 5
+    # Same quarantine as the npm block below, for the actions a workflow runs
+    # with this repository's token. github-actions only supports `default-days`
+    # (the per-semver keys are npm-style and are ignored here), so one figure:
+    # 7 days, the npm minor window. Security updates still bypass it.
+    cooldown:
+      default-days: 7
+    # Only minors and patches are grouped. An action MAJOR arrives as its own PR:
+    # a major can rename inputs or change what it requires (changesets/action v2
+    # needs Changesets CLI v3), and bundled with routine SHA bumps it merged
+    # unnoticed and broke the release job. Its own PR keeps it visible and
+    # reviewable on its own.
     groups:
-      all-actions:
+      actions-minor-and-patch:
         patterns:
           - "*"
+        update-types:
+          - minor
+          - patch
     commit-message:
       prefix: chore
       include: scope
@@ -37,6 +52,22 @@ updates:
       time: "06:00"
       timezone: America/Sao_Paulo
     open-pull-requests-limit: 5
+    # Supply-chain quarantine: wait N days after a version is published before
+    # opening its update PR. A compromised release is typically detected and
+    # pulled within hours, so the riskiest moment in a version's life is right
+    # after it appears — waiting it out means a malicious release is usually
+    # gone before a PR ever proposes it. This matches `minimumReleaseAge` in
+    # `pnpm-workspace.yaml`, so the automated path and a maintainer running
+    # `pnpm add` sit behind the same floor.
+    #
+    # Applies to routine VERSION updates only. A Dependabot SECURITY update (a
+    # fix for an advisory on a dependency already in use) bypasses cooldown and
+    # opens immediately — the quarantine never delays a patch actually needed.
+    # `.github/workflows/dependency-audit.yml` re-checks the versions a PR
+    # resolves, which is what covers that bypass.
+    cooldown:
+      semver-patch-days: 3
+      semver-minor-days: 7
     groups:
       all-npm:
         patterns:

@@ -1,8 +1,15 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import { readSettings } from './settings'
+import {
+  backup,
+  describeCommand,
+  isTokenlineCommand,
+  planSubagentStatusLine,
+  readSettings,
+  removeTokenlineBlocks,
+} from './settings'
 
 // readSettings is the first link in the settings.json patching contract (#5).
 // It has four branches, all covered here: an absent file (exists: false), an
@@ -64,4 +71,124 @@ it('parses a valid settings file, exposing both the data and its raw text', () =
   expect(result.exists).toBe(true)
   expect(result.data).toEqual(settings)
   expect(result.raw).toBe(raw)
+})
+
+describe('planSubagentStatusLine', () => {
+  const ours = 'bash /home/u/.claude/tokenline.sh'
+
+  it('adds the block when none exists', () => {
+    expect(planSubagentStatusLine(undefined, ours, false)).toBe('add')
+  })
+
+  it('confirms a block that already runs this exact command', () => {
+    expect(planSubagentStatusLine({ command: ours }, ours, false)).toBe(
+      'confirm',
+    )
+  })
+
+  it("keeps another tool's block without --force, so the install never fails on it", () => {
+    expect(
+      planSubagentStatusLine({ command: 'bash other.sh' }, ours, false),
+    ).toBe('keep')
+  })
+
+  it('repoints a tokenline block at another path without --force', () => {
+    expect(
+      planSubagentStatusLine(
+        { command: 'bash /old/place/tokenline.sh' },
+        ours,
+        false,
+      ),
+    ).toBe('replace')
+  })
+
+  it("replaces another tool's block with --force", () => {
+    expect(
+      planSubagentStatusLine({ command: 'bash other.sh' }, ours, true),
+    ).toBe('replace')
+  })
+})
+
+describe('removeTokenlineBlocks', () => {
+  it('removes both tokenline blocks and nothing else', () => {
+    const data = {
+      statusLine: {
+        type: 'command' as const,
+        command: 'bash /x/tokenline.sh',
+        refreshInterval: 1,
+      },
+      subagentStatusLine: {
+        type: 'command' as const,
+        command: 'bash /x/tokenline.sh',
+      },
+      theme: 'dark',
+    }
+
+    expect(removeTokenlineBlocks(data)).toEqual([
+      'statusLine',
+      'subagentStatusLine',
+    ])
+    expect(data).toEqual({ theme: 'dark' })
+  })
+
+  it("leaves another tool's subagentStatusLine in place", () => {
+    const data = {
+      statusLine: {
+        type: 'command' as const,
+        command: 'bash /x/tokenline.sh',
+        refreshInterval: 1,
+      },
+      subagentStatusLine: {
+        type: 'command' as const,
+        command: 'bash other.sh',
+      },
+    }
+
+    expect(removeTokenlineBlocks(data)).toEqual(['statusLine'])
+    expect(data).toEqual({
+      subagentStatusLine: { type: 'command', command: 'bash other.sh' },
+    })
+  })
+})
+
+describe('describeCommand', () => {
+  it('returns the command of a well-formed block', () => {
+    expect(describeCommand({ command: 'bash other.sh' })).toBe('bash other.sh')
+  })
+
+  it.each([[{}], [{ command: 42 }], ['bash other.sh'], [null]])(
+    'falls back for a malformed block (%j)',
+    (block) => {
+      expect(describeCommand(block)).toBe('no command')
+    },
+  )
+})
+
+describe('backup', () => {
+  it('copies the file to <file>.bak and returns that path', () => {
+    const file = join(dir, 'settings.json')
+    writeFileSync(file, '{"theme":"dark"}')
+
+    const bak = backup(file)
+
+    expect(bak).toBe(`${file}.bak`)
+    expect(readFileSync(bak, 'utf8')).toBe('{"theme":"dark"}')
+    expect(readFileSync(file, 'utf8')).toBe('{"theme":"dark"}')
+  })
+})
+
+describe('isTokenlineCommand', () => {
+  it.each([
+    'bash /home/u/.claude/tokenline.sh',
+    'bash "/My Drive/tokenline.sh"',
+  ])('matches a tokenline command (%s)', (cmd) => {
+    expect(isTokenlineCommand(cmd)).toBe(true)
+  })
+
+  it.each([[undefined], [''], ['bash other.sh']])(
+    'rejects a missing, empty or foreign command (%j)',
+    (cmd) => {
+      expect(isTokenlineCommand(cmd)).toBe(false)
+    },
+  )
 })

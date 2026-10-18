@@ -1,6 +1,6 @@
 name: Feature request
 description: Suggest an improvement or new statusline element
-labels: [enhancement]
+type: Feature
 body:
   - type: textarea
     id: problem

@@ -4,8 +4,10 @@ import { join, resolve } from 'node:path'
 import type { Target } from '../shared/types'
 import {
   baseConfigDir,
+  claudeDir,
   scriptTarget,
   settingsTarget,
+  statusLineCommand,
   targetLabel,
 } from './paths'
 
@@ -51,6 +53,58 @@ describe('paths', () => {
     expect(scriptTarget(target)).toBe(resolve('/custom/dir/tokenline.sh'))
     expect(settingsTarget(target)).toBe(
       join(homedir(), '.gemini', 'antigravity-cli', 'settings.json'),
+    )
+  })
+})
+
+describe('claudeDir', () => {
+  it('is the project .claude dir by default and ~/.claude with --global', () => {
+    expect(claudeDir({ global: false, dir: null, targetCli: 'claude' })).toBe(
+      resolve('.claude'),
+    )
+    expect(claudeDir({ global: true, dir: null, targetCli: 'claude' })).toBe(
+      join(homedir(), '.claude'),
+    )
+  })
+})
+
+describe('--dir override', () => {
+  it('moves only the script for a project install; settings stay in .claude', () => {
+    const target: Target = {
+      global: false,
+      dir: '/home/u/bin',
+      targetCli: 'claude',
+    }
+    expect(scriptTarget(target)).toBe(resolve('/home/u/bin/tokenline.sh'))
+    expect(settingsTarget(target)).toBe(resolve('.claude/settings.json'))
+  })
+
+  it('moves only the script for a global install; settings stay in ~/.claude', () => {
+    const target: Target = {
+      global: true,
+      dir: '/home/u/bin',
+      targetCli: 'claude',
+    }
+    expect(scriptTarget(target)).toBe(resolve('/home/u/bin/tokenline.sh'))
+    expect(settingsTarget(target)).toBe(
+      join(homedir(), '.claude/settings.json'),
+    )
+  })
+
+  it('resolves a relative --dir against the working directory', () => {
+    const target: Target = { global: false, dir: 'bin', targetCli: 'claude' }
+    expect(scriptTarget(target)).toBe(resolve('bin', 'tokenline.sh'))
+  })
+})
+
+describe('statusLineCommand', () => {
+  it('leaves a space-free path unquoted, matching the install.sh snippet', () => {
+    expect(statusLineCommand('/p/tokenline.sh')).toBe('bash /p/tokenline.sh')
+  })
+
+  it('quotes a path that contains a space', () => {
+    expect(statusLineCommand('/My Drive/tokenline.sh')).toBe(
+      'bash "/My Drive/tokenline.sh"',
     )
   })
 })

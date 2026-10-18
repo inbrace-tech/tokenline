@@ -1,40 +1,103 @@
 # @inbrace-tech/tokenline
 
+## 1.5.2
+
+### Patch Changes
+
+- Subagent rows show each subagent's type (`Explore`, `code-reviewer`, …) from `agentType` instead of `local_agent` for every row. ([#149](https://github.com/inbrace-tech/tokenline/pull/149) by [@ropdias](https://github.com/ropdias))
+
+## 1.5.1
+
+### Patch Changes
+
+- fix: the update notice and subagent-row state now work when `XDG_RUNTIME_DIR` points to a missing dir (WSL2 without systemd), via a private `${TMPDIR:-/tmp}/tokenline-<uid>`. ([#145](https://github.com/inbrace-tech/tokenline/pull/145) by [@ropdias](https://github.com/ropdias))
+
+## 1.5.0
+
+### Minor Changes
+
+- feat: show the session's current reasoning effort next to the model (e.g. `Sonnet 5.5 · effort: medium`), coloured by level and following a mid-session `/effort` change. ([#125](https://github.com/inbrace-tech/tokenline/pull/125) by [@ropdias](https://github.com/ropdias))
+
+- Subagent rows in Claude Code's agent panel, each with its own cache countdown and the tool it waits on; `init` wires `subagentStatusLine` (`--no-subagents` to skip). ([#116](https://github.com/inbrace-tech/tokenline/pull/116) by [@ropdias](https://github.com/ropdias))
+
+### Patch Changes
+
+- fix: bill cache reads at 0.05x and output at 5x on Gemini 4 Argon, so its per-turn `eq` and `saving %` match the official price; other Gemini models keep 0.25x / 4x. ([#130](https://github.com/inbrace-tech/tokenline/pull/130) by [@ropdias](https://github.com/ropdias))
+
+- fix: bill cache reads at 0.05x on Claude Sonnet 5.5, so its per-turn `eq` and `saving %` match the official price; Claude Haiku 5.5 is confirmed at the standard 0.1x. ([#126](https://github.com/inbrace-tech/tokenline/pull/126) by [@ropdias](https://github.com/ropdias))
+
+- `init` repoints a tokenline `subagentStatusLine` that runs the script from another path instead of keeping it, and `doctor` no longer prints `undefined` for a `subagentStatusLine` without a `command`. ([#116](https://github.com/inbrace-tech/tokenline/pull/116) by [@ropdias](https://github.com/ropdias))
+
+- `update` now tells a Claude Code install without subagent rows the exact `init` command that turns them on, keeping its `--dir`. ([#116](https://github.com/inbrace-tech/tokenline/pull/116) by [@ropdias](https://github.com/ropdias))
+
+## 1.4.0
+
+### Minor Changes
+
+- feat: the update notice shows up when you open a new session (checked at most hourly, every 6h in long sessions) and tells you to run it with `!` in Claude Code. ([#113](https://github.com/inbrace-tech/tokenline/pull/113) by [@ropdias](https://github.com/ropdias))
+
+## 1.3.0
+
+### Minor Changes
+
+- feat: `npx @inbrace-tech/tokenline@latest update` replaces the installed `tokenline.sh` in place, without touching `settings.json`. ([#107](https://github.com/inbrace-tech/tokenline/pull/107) by [@ropdias](https://github.com/ropdias))
+
+- feat: installed copies show a one-line notice when a newer version is published (daily background check, opt out with `TOKENLINE_NO_UPDATE_CHECK=1`). ([#108](https://github.com/inbrace-tech/tokenline/pull/108) by [@ropdias](https://github.com/ropdias))
+
+### Patch Changes
+
+- fix: `init` and `update` replace `tokenline.sh` atomically, so a refresh mid-update never runs a half-written script. ([#109](https://github.com/inbrace-tech/tokenline/pull/109) by [@ropdias](https://github.com/ropdias))
+
+## 1.2.4
+
+### Patch Changes
+
+- fix: bill cache reads at 0.05x on Claude Opus 5.5, so the per-turn `eq` and `saving %` match its discounted cache-hit price. ([#103](https://github.com/inbrace-tech/tokenline/pull/103) by [@ropdias](https://github.com/ropdias))
+
+## 1.2.3
+
+### Patch Changes
+
+- fix: show the rate-limit reset ETA and pace markers again (`resets_at` is read as epoch seconds) ([#95](https://github.com/inbrace-tech/tokenline/pull/95) by [@ropdias](https://github.com/ropdias))
+
+## 1.2.2
+
+### Patch Changes
+
+- fix: bill cache reads at 0.025x on Claude Fable 5.1 / Mythos 5.1; other models keep 0.1x ([#75](https://github.com/inbrace-tech/tokenline/pull/75) by [@ropdias](https://github.com/ropdias))
+
 ## 1.2.1
 
 ### Patch Changes
 
-- 60ba6a6: Add `--antigravity` flag to installer CLI to target Antigravity CLI global settings (`~/.gemini/antigravity-cli/settings.json`).
+- feat: add `--antigravity` to install into the Antigravity CLI global settings ([#61](https://github.com/inbrace-tech/tokenline/pull/61) by [@ropdias](https://github.com/ropdias))
 
 ## 1.2.0
 
 ### Minor Changes
 
-- 5e7274b: Add macOS support. `tokenline.sh` now abstracts `date`/`stat` over GNU vs BSD by
-  probing behavior once (`epoch_from_iso`, `file_mtime`), pins `LC_ALL=C` so a
-  comma-decimal locale renders identically, and the installer accepts macOS
-  (`brew install bash jq`). Closes #2.
+- feat: add macOS support (BSD `date`/`stat`, locale-safe rendering) ([#23](https://github.com/inbrace-tech/tokenline/pull/23) by [@xinnaider](https://github.com/xinnaider))
 
 ## 1.1.2
 
 ### Patch Changes
 
-- 6e77d23: docs: update README to clarify tokenline features and real-time cost tracking
+- docs: clarify the tokenline features and real-time cost tracking in the README ([#20](https://github.com/inbrace-tech/tokenline/pull/20) by [@ropdias](https://github.com/ropdias))
 
 ## 1.1.1
 
 ### Patch Changes
 
-- 9351972: fix(docs): update installer README text to reflect local-first default and --global flag
+- docs: fix the installer paths and the `--global` flag in the README ([#18](https://github.com/inbrace-tech/tokenline/pull/18) by [@ropdias](https://github.com/ropdias))
 
 ## 1.1.0
 
 ### Minor Changes
 
-- ab63142: Changed default installation to local project (.claude), added --global flag, and revamped README with quick start onboarding and Prompt Caching guide.
+- feat: install into the local project (`.claude`) by default; add `--global` ([#16](https://github.com/inbrace-tech/tokenline/pull/16) by [@ropdias](https://github.com/ropdias))
 
 ## 1.0.1
 
 ### Patch Changes
 
-- 0d349ac: Fix CLI parser to collect and report all unknown options instead of just the last one.
+- fix: report every unknown CLI option, not just the last one ([#14](https://github.com/inbrace-tech/tokenline/pull/14) by [@ropdias](https://github.com/ropdias))

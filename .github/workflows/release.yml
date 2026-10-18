@@ -1,5 +1,5 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# Release — triggered on pushes to main.
+# Release — triggered on pushes to main, or by hand (workflow_dispatch).
 # Reads pending .changeset/*.md files, bumps versions, generates CHANGELOG.md,
 # creates a "chore: version packages" PR, and publishes to NPM when merged.
 # The PR title/commit are set to a conventional-commits form (lowercase subject)
@@ -16,6 +16,11 @@ on:
   push:
     branches:
       - main
+  # Manual re-run: GitHub occasionally drops a push event, so a merged
+  # "chore: version packages" PR gets no Release run and nothing publishes.
+  # Dispatching re-runs the same logic on the current main; it is idempotent
+  # (publishes only a version not yet on npm).
+  workflow_dispatch:
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
@@ -29,26 +34,45 @@ permissions:
 jobs:
   release:
     name: Version and Publish
+    # A dispatch can target any branch; only main may version or publish.
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      # No persisted credentials here either. changesets/action never reuses the
+      # checkout's token for its pushes: v1 writes its own ~/.netrc from
+      # GITHUB_TOKEN, and v2 pushes through the GitHub API (or, with
+      # push-with-git-cli, a command-scoped auth header). Dropping the checkout's
+      # copy keeps the token out of .git/config while `pnpm install` runs
+      # dependency build scripts in the step below.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       # Setup node + pnpm + install (Node from .nvmrc, pnpm from package.json)
       - uses: ./.github/actions/setup-node-pnpm
 
       - name: Create Release Pull Request or Publish
         id: changesets
-        uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0
+        uses: changesets/action@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
+        # v2 inputs (v1's publish/title/commit were renamed and now fail the
+        # step). It requires @changesets/cli v3, pushes the version commit and
+        # the release tag through the GitHub API with the default `github-token`,
+        # and still creates GitHub Releases by default.
         with:
-          # This triggers the "release" script we added to package.json
-          publish: pnpm run release
+          # The "release" script in package.json: build, then `changeset
+          # publish`, which writes the NDJSON the action reads (via the
+          # CHANGESETS_OUTPUT env it injects) to tag and create the Release.
+          publish-script: pnpm run release
           # Conventional-commits title for the auto-generated release PR, so the
           # "PR title (semantic)" check passes (it requires a lowercase subject).
-          title: "chore: version packages"
-          commit: "chore: version packages"
+          pr-title: "chore: version packages"
+          commit-message: "chore: version packages"
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # No GITHUB_TOKEN here: v2 reads the default `github-token` input,
+          # hands it to the publish script itself, and fails if an env copy
+          # ever differs from the input.
+          #
           # NPM_TOKEN removed — Trusted Publishing (OIDC) is used instead.
           # npm detects the OIDC token via the ACTIONS_ID_TOKEN_REQUEST_URL /
           # ACTIONS_ID_TOKEN_REQUEST_TOKEN env vars injected automatically by
@@ -57,3 +81,19 @@ jobs:
           # NPM_CONFIG_PROVENANCE=true attaches a signed provenance statement to
           # every published tarball, linking it back to this exact workflow run.
           NPM_CONFIG_PROVENANCE: "true"
+
+      # Attach the statusline to the GitHub Release, for installs without Node:
+      # `curl -fsSL .../releases/latest/download/install.sh | bash`. The asset is
+      # stamped by the same code as an npm install (src/core/stamp.ts): its
+      # version, and the curl command as its update path. The script prints the
+      # version, which names the release tag.
+      - name: Attach tokenline.sh and install.sh to the release
+        if: steps.changesets.outputs.published == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p release-assets
+          version="$(node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON \
+            scripts/stamp-release-asset.mts release-assets/tokenline.sh)"
+          cp install.sh release-assets/install.sh
+          gh release upload "v${version}" release-assets/tokenline.sh release-assets/install.sh --clobber
