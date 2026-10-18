@@ -12,6 +12,8 @@
 #                                 # no clone: downloads the latest release's
 #                                 # tokenline.sh to ~/.claude (TOKENLINE_DIR to
 #                                 # change it). Re-running it updates in place.
+#   ./install.sh --theme minimal  # the snippet with a layout preset; piped:
+#                                 # curl … | bash -s -- --theme minimal
 # ==============================================================================
 set -euo pipefail
 
@@ -26,6 +28,22 @@ c_green=$'\033[0;32m'; c_red=$'\033[0;31m'; c_yellow=$'\033[0;33m'; c_reset=$'\0
 ok()   { printf '%s✓%s %s\n' "$c_green"  "$c_reset" "$1"; }
 warn() { printf '%s!%s %s\n'      "$c_yellow" "$c_reset" "$1"; }
 err()  { printf '%s✗%s %s\n' "$c_red"    "$c_reset" "$1"; }
+
+# --theme <name> only changes the printed command; the names are
+# tokenline.sh's. Empty is the default layout, which takes no flag.
+theme=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --theme) theme="${2:-}"; shift; [ $# -gt 0 ] && shift ;;
+    --theme=*) theme="${1#--theme=}"; shift ;;
+    *) shift ;;
+  esac
+done
+case "$theme" in
+  ""|full) theme="" ;;
+  minimal|compact|economics|limits) ;;
+  *) warn "unknown theme '$theme', using the default (full|minimal|compact|economics|limits)"; theme="" ;;
+esac
 
 # From a clone, BASH_SOURCE points at this file and tokenline.sh sits next to it.
 # Piped through `curl | bash` there is no file, so download the release asset,
@@ -124,9 +142,15 @@ if [ "$missing" -ne 0 ]; then
   printf '\n'
 fi
 
+statusline_cmd="bash $TOKENLINE"
+[ -n "$theme" ] && statusline_cmd="$statusline_cmd --theme $theme"
+
 # Already wired (a re-run to update): the block is in place, nothing to paste.
+# A re-run without --theme counts a themed block as wired too, so the plain
+# update one-liner never asks to paste again.
 for settings in "$HOME/.claude/settings.json" "$HOME/.gemini/antigravity-cli/settings.json"; do
-  if [ -f "$settings" ] && grep -qF "\"bash $TOKENLINE\"" "$settings"; then
+  if [ -f "$settings" ] && { grep -qF "\"$statusline_cmd\"" "$settings" \
+      || { [ -z "$theme" ] && grep -qF "\"bash $TOKENLINE --theme " "$settings"; }; }; then
     ok "already wired in $settings — the statusline picks up this version on its next refresh"
     printf '\n'
     exit 0
@@ -139,7 +163,7 @@ printf 'inside the top-level object:\n\n'
 cat <<EOF
   "statusLine": {
     "type": "command",
-    "command": "bash $TOKENLINE",
+    "command": "$statusline_cmd",
     "refreshInterval": 1
   },
   "subagentStatusLine": {

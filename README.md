@@ -177,7 +177,8 @@ Then restart Claude Code.
 
 The statusline ships five layouts, selected with `--theme <name>` in the
 `statusLine` command (or the `TOKENLINE_THEME` env var). `full` is the default
-and needs no flag.
+and needs no flag. `install.sh --theme <name>` prints the snippet with the flag
+already in place (piped: `curl … | bash -s -- --theme <name>`).
 
 | Theme | Lines | Shows |
 | --- | --- | --- |

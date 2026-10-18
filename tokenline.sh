@@ -54,7 +54,9 @@ fi
 THEME="${TOKENLINE_THEME:-full}"
 while [ $# -gt 0 ]; do
   case "$1" in
-    --theme) THEME="${2:-full}"; shift 2 ;;
+    # Never `shift 2`: with `--theme` last it fails without shifting, and the
+    # loop would spin forever on the host's every refresh.
+    --theme) THEME="${2:-full}"; shift; [ $# -gt 0 ] && shift ;;
     --theme=*) THEME="${1#--theme=}"; shift ;;
     *) shift ;;
   esac
