@@ -1,5 +1,11 @@
 # @inbrace-tech/tokenline
 
+## 1.5.2
+
+### Patch Changes
+
+- Subagent rows show each subagent's type (`Explore`, `code-reviewer`, …) from `agentType` instead of `local_agent` for every row. ([#149](https://github.com/inbrace-tech/tokenline/pull/149) by [@ropdias](https://github.com/ropdias))
+
 ## 1.5.1
 
 ### Patch Changes
