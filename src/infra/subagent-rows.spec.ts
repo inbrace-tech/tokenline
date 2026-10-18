@@ -269,6 +269,30 @@ describe.skipIf(!hasJq)('tokenline.sh — subagent rows', () => {
     expect(new Set(bracketed).size).toBe(1)
   })
 
+  it('labels a row with agentType, then name, then the task kind', () => {
+    const { rows } = render({
+      session_id: 'sess-1',
+      columns: 140,
+      tasks: [
+        {
+          id: 'a',
+          type: 'local_agent',
+          agentType: 'architecture-reviewer',
+          name: 'arch',
+          status: 'running',
+        },
+        { id: 'b', type: 'local_agent', name: 'explorer', status: 'running' },
+        { id: 'c', type: 'local_agent', status: 'running' },
+      ],
+    })
+
+    expect(rows.map((r) => plain(r.content).split(/\s+/)[0])).toEqual([
+      'architecture-reviewer',
+      'explorer',
+      'local_agent',
+    ])
+  })
+
   it('renders the main statusline when "tasks" is not an array', () => {
     const r = spawnSync('bash', [SCRIPT], {
       input: JSON.stringify({

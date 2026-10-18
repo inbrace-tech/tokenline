@@ -888,9 +888,9 @@ render_subagent_rows() {
   # the rows line up under each other.
   local -a ids types glyphs models efforts elapsed ctx cache activity descs
   local w_type=0 w_model=0 w_effort=0 w_elapsed=0 w_ctx=0 w_cache=0 w_act=0
-  local line id name type status desc start_ms tokens window model effort aid
+  local line id name type status desc start_ms tokens window model effort agent_type aid
   for line in "${rows[@]}"; do
-    IFS="$_sa_sep" read -r id name type status desc start_ms tokens window model effort <<< "$line"
+    IFS="$_sa_sep" read -r id name type status desc start_ms tokens window model effort agent_type <<< "$line"
     [ -z "$id" ] && continue
 
     aid="${id#agent-}"
@@ -903,7 +903,10 @@ render_subagent_rows() {
     # cache still matters — show it as running (activity, blinking COLD).
     [ "$sa_mode" = "waiting-bg" ] && status="running"
 
-    local t="${type:-$name}"
+    # `type` is the task kind (always "local_agent" for a subagent); the
+    # subagent's own type ("Explore", "code-reviewer") is `agentType`, which
+    # only newer Claude Code versions send. Fall back to name, then kind.
+    local t="${agent_type:-${name:-$type}}"
     t=$(fit "${t:-agent}" 24)
 
     # A finished subagent's clock stops at its last turn, not at "now".
@@ -1029,7 +1032,7 @@ maybe_render_subagents() {
         | [ (.id // ""), (.name // ""), (.type // ""), (.status // ""),
             (.description // .label // ""), (.startTime // 0),
             (.tokenCount // 0), (.contextWindowSize // 0),
-            (.model // ""), (.effort // "") ]
+            (.model // ""), (.effort // ""), (.agentType // "") ]
         | map(clean) | join("\u001f"))
     else empty end' 2>/dev/null)
   [[ "$extracted" == subagents* ]] || return 1
