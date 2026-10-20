@@ -1,7 +1,17 @@
 //! Formatting helpers, byte-for-byte parity with `tokenline.sh`.
 //!
-//! Carries `fmt_k` / `fmt_eta` and the 256-color palette; the ISO-8601 → epoch
-//! parser lands in the next slice.
+//! Carries `fmt_k` / `fmt_eta`, the 256-color palette, and the ISO-8601 → epoch
+//! parser.
+
+use jiff::Timestamp;
+
+/// Parse an RFC 3339 / ISO-8601 UTC timestamp to epoch seconds, or `None` on a
+/// malformed value. Replaces the bash `epoch_from_iso` (`date -d`): transcripts
+/// and rate-limit resets are fixed-format UTC, so `jiff::Timestamp` covers them
+/// without pulling a timezone database.
+pub fn iso8601_to_epoch(iso: &str) -> Option<i64> {
+    iso.parse::<Timestamp>().ok().map(|t| t.as_second())
+}
 
 /// 256-color SGR sequences, byte-identical to `tokenline.sh`'s `COLOR_*` /
 /// `STYLE_*` constants (`tokenline.sh:21-30`). Byte parity matters: the golden
@@ -73,6 +83,34 @@ mod tests {
         assert_eq!(fmt_k(86_600), "86.6k");
         assert_eq!(fmt_k(1_000_000), "1.0M");
         assert_eq!(fmt_k(1_500_000), "1.5M");
+    }
+
+    #[test]
+    fn iso8601_to_epoch_parses_utc() {
+        // Exact epochs (verified independently). now in the golden = 1_783_000_000.
+        assert_eq!(
+            iso8601_to_epoch("2026-07-05T18:00:00Z"),
+            Some(1_783_274_400)
+        );
+        assert_eq!(
+            iso8601_to_epoch("2026-07-06T12:00:00Z"),
+            Some(1_783_339_200)
+        );
+        assert_eq!(
+            iso8601_to_epoch("2026-07-05T00:00:00Z"),
+            Some(1_783_209_600)
+        );
+    }
+
+    #[test]
+    fn iso8601_to_epoch_fractional_and_invalid() {
+        // Sub-second precision truncates to the whole second.
+        assert_eq!(
+            iso8601_to_epoch("2026-07-05T18:00:00.500Z"),
+            Some(1_783_274_400)
+        );
+        assert_eq!(iso8601_to_epoch("not a timestamp"), None);
+        assert_eq!(iso8601_to_epoch(""), None);
     }
 
     #[test]
