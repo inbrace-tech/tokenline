@@ -1,5 +1,11 @@
 # @inbrace-tech/tokenline
 
+## 1.6.0
+
+### Minor Changes
+
+- Add statusline themes: `--theme minimal|compact|economics|limits` (or `TOKENLINE_THEME`) for a one- or two-line layout; `full` stays the default, and `install.sh --theme` prints the matching snippet. ([#24](https://github.com/inbrace-tech/tokenline/pull/24) by [@xinnaider](https://github.com/xinnaider))
+
 ## 1.5.2
 
 ### Patch Changes
