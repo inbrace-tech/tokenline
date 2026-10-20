@@ -173,6 +173,23 @@ Add the printed block to your project's `.claude/settings.json` (or `~/.claude/s
 
 Then restart Claude Code.
 
+### Themes
+
+The statusline ships five layouts, selected with `--theme <name>` in the
+`statusLine` command (or the `TOKENLINE_THEME` env var). `full` is the default
+and needs no flag. `install.sh --theme <name>` prints the snippet with the flag
+already in place (piped: `curl … | bash -s -- --theme <name>`).
+
+| Theme | Lines | Shows |
+| --- | --- | --- |
+| `full` | 3 | model · ctx · cache + per-turn economics + 5h/7d limit bars |
+| `minimal` | 1 | model · ctx% · cache state |
+| `compact` | 1 | model · ctx (tokens + %) · cache TTL · saving% |
+| `economics` | 2 | `full`'s first line + the per-turn economics breakdown |
+| `limits` | 2 | `full`'s first line + the 5h/7d rate-limit bars |
+
+An unknown theme name falls back to `full`, so a typo never blanks the line.
+
 ### What the installer does
 
 `npx @inbrace-tech/tokenline init` is deliberately transparent about touching your config:

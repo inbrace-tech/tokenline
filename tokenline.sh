@@ -48,6 +48,24 @@ if ! command -v jq >/dev/null 2>&1; then
   exit 0
 fi
 
+# --- Theme ---
+# Layout preset from `--theme <name>` or $TOKENLINE_THEME. Unknown values fall
+# back to "full" (the original three-line render) so a typo never blanks it.
+THEME="${TOKENLINE_THEME:-full}"
+while [ $# -gt 0 ]; do
+  case "$1" in
+    # Never `shift 2`: with `--theme` last it fails without shifting, and the
+    # loop would spin forever on the host's every refresh.
+    --theme) THEME="${2:-full}"; shift; [ $# -gt 0 ] && shift ;;
+    --theme=*) THEME="${1#--theme=}"; shift ;;
+    *) shift ;;
+  esac
+done
+case "$THEME" in
+  full|minimal|compact|economics|limits) ;;
+  *) THEME="full" ;;
+esac
+
 # --- GNU vs BSD coreutils (Linux vs macOS) ---
 # Probe behavior, not `uname`, so Homebrew coreutils is picked up automatically.
 if date -d "@0" >/dev/null 2>&1; then _date_gnu=1; else _date_gnu=0; fi
@@ -238,6 +256,8 @@ fmt_eta() {
 # --- 3. Cache Timer Logic ---
 compute_cache_timer() {
   cache_info=""
+  # Exposed for the short themes (minimal/compact): cache state, clock, color.
+  cache_state=""; cache_clock=""; cache_color=""
   local ts_cache_file="$_runtime_dir/lastts-${session_id:-default}"
   local ttl_cache_file="$_runtime_dir/ttl-${session_id:-default}"
   local tokens_cache_file="$_runtime_dir/lasttokens-${session_id:-default}"
@@ -334,8 +354,11 @@ compute_cache_timer() {
 
     local suffix="HOT"
     [ "$pct10" -lt 1 ] && suffix="HOT !"
+    cache_state="$suffix"; cache_color="$fg"
+    cache_clock=$(printf '%d:%02d' "$mins" "$secs")
     cache_info=$(printf '%s[%s] cache: %s%d:%02d %s%s' "$COLOR_GRAY" "$ttl_label" "$fg" "$mins" "$secs" "$suffix" "$COLOR_RESET")
   else
+    cache_state="COLD"; cache_color="${COLOR_RED}"; cache_clock=""
     cache_info=$(printf '%s[%s] cache: \033[1;5m%sCOLD%s' "$COLOR_GRAY" "$ttl_label" "$COLOR_RED" "$COLOR_RESET")
   fi
 }
@@ -469,6 +492,8 @@ compute_rate_limits() {
 # --- 6. Last-Turn Token Economics Breakdown & Equivalents ---
 compute_turn_breakdown() {
   last_info=""
+  # Exposed for the compact theme: saving percentage and its color.
+  saving_pct=""; save_color=""
   if [ "$cur_cread" -gt 0 ] || [ "$cur_cwrite" -gt 0 ] || [ "$cur_input" -gt 0 ] || [ "$cur_output" -gt 0 ]; then
     local read_mult
     local write_mult
@@ -499,7 +524,7 @@ compute_turn_breakdown() {
     eq_tokens=$(awk "BEGIN { printf \"%d\", ($cur_cread * $read_mult) + ($cur_cwrite * $write_mult) + ($cur_input * $input_mult) + ($cur_output * $output_mult) }")
     uncached_eq=$(awk "BEGIN { printf \"%d\", ($cur_cread + $cur_cwrite + $cur_input) * $input_mult + ($cur_output * $output_mult) }")
     
-    local saving_pct=0
+    saving_pct=0
     [ "$uncached_eq" -gt 0 ] && saving_pct=$(awk "BEGIN { printf \"%d\", 100 * ($uncached_eq - $eq_tokens) / $uncached_eq }")
     
     local read_lbl="${read_mult}x"
@@ -507,7 +532,6 @@ compute_turn_breakdown() {
     local input_lbl="${input_mult}x"
     local output_lbl="${output_mult}x"
 
-    local save_color
     if   [ "$saving_pct" -ge 90 ]; then save_color="$COLOR_GREEN"
     elif [ "$saving_pct" -ge 70 ]; then save_color="$COLOR_YELLOW"
     elif [ "$saving_pct" -ge 50 ]; then save_color="$COLOR_ORANGE"
@@ -598,7 +622,55 @@ compute_update_notice() {
 }
 
 # --- 8. Compose and Render Output ---
+ctx_color_for() {
+  # Bold green/yellow/red by context-used percentage.
+  local p=$1
+  if   [ "$p" -ge 80 ]; then printf '\033[01;31m'
+  elif [ "$p" -ge 50 ]; then printf '\033[01;33m'
+  else                       printf '\033[01;32m'
+  fi
+}
+
+# Single-line themes: minimal (model · ctx% · cache state) and compact
+# (model · ctx tokens+% · cache clock+state · saving%).
+render_oneline() {
+  local sep="${COLOR_GRAY} · ${COLOR_RESET}"
+  local out="$model"
+  [ "$cli_client" = "antigravity" ] && out="${COLOR_CYAN}🌌 Antigravity${COLOR_RESET} (${model})"
+  local p=""
+  [ -n "$used_pct" ] && p=$(printf '%.0f' "$used_pct")
+
+  if [ -n "$p" ]; then
+    local cc; cc=$(ctx_color_for "$p")
+    if [ "$THEME" = "compact" ] && [ "${tokens_used:-0}" -gt 0 ] && [ "${tokens_limit:-0}" -gt 0 ]; then
+      out="$out${sep}${COLOR_GRAY}ctx ${COLOR_RESET}${cc}$(fmt_k "$tokens_used")/$(fmt_k "$tokens_limit") ${p}%${COLOR_RESET}"
+    else
+      out="$out${sep}${COLOR_GRAY}ctx ${COLOR_RESET}${cc}${p}%${COLOR_RESET}"
+    fi
+  fi
+
+  if [ -n "$cache_state" ]; then
+    local cstr="cache "
+    [ "$THEME" = "compact" ] && [ -n "$cache_clock" ] && cstr="cache ${cache_clock} "
+    out="$out${sep}${COLOR_GRAY}${cstr}${cache_color}${cache_state}${COLOR_RESET}"
+  fi
+
+  if [ "$THEME" = "compact" ] && [ -n "$saving_pct" ]; then
+    out="$out${sep}${COLOR_GRAY}save ${save_color}${saving_pct}%${COLOR_RESET}"
+  fi
+
+  printf '%s\n' "$out"
+}
+
 render_statusline() {
+  # minimal/compact: one line, then the update notice.
+  if [ "$THEME" = "minimal" ] || [ "$THEME" = "compact" ]; then
+    render_oneline
+    [ -n "$update_info" ] && printf "%s\n" "$update_info"
+    return
+  fi
+
+  # full, economics and limits share the line-1 layout below.
   # Line 1: client/model | ctx | cache TTL
   local display_header=""
   if [ "$cli_client" = "antigravity" ]; then
@@ -617,10 +689,10 @@ render_statusline() {
   printf "%s\n" "$line1"
 
   # Line 2: breakdown of cache / raw / saving (only shown when activity happens)
-  [ -n "$last_info" ] && printf "%s\n" "$last_info"
+  [ -n "$last_info" ] && [ "$THEME" != "limits" ] && printf "%s\n" "$last_info"
 
   # Line 3: API rate limits and progress bars (Only shown for Claude models where limits exist)
-  if [ "$is_gemini" = false ] && { [ -n "$rl_5h_info" ] || [ -n "$rl_7d_info" ]; }; then
+  if [ "$THEME" != "economics" ] && [ "$is_gemini" = false ] && { [ -n "$rl_5h_info" ] || [ -n "$rl_7d_info" ]; }; then
     local sep_line="${COLOR_DARK_GRAY}──────────────────────────────${COLOR_RESET}"
     printf "%s\n" "$sep_line"
     local line_rl=""
