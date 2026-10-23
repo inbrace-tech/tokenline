@@ -1,0 +1,13 @@
+{
+  "model": {"display_name": "Opus 4.8"},
+  "context_window": {
+    "used_percentage": 9.0, "context_window_size": 1000000,
+    "current_usage": {"input_tokens": 2, "output_tokens": 2000,
+      "cache_creation_input_tokens": 2200, "cache_read_input_tokens": 86600}
+  },
+  "transcript_path": "", "session_id": "golden-healthy",
+  "rate_limits": {
+    "five_hour": {"used_percentage": 12.0, "resets_at": "2026-07-05T18:00:00Z"},
+    "seven_day": {"used_percentage": 64.0, "resets_at": "2026-07-06T12:00:00Z"}
+  }
+}
