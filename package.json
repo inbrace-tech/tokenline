@@ -57,16 +57,16 @@
     "@eslint/js": "10.0.1",
     "@types/node": "24.19.2",
     "@vitest/eslint-plugin": "1.6.28",
-    "eslint": "10.13.0",
+    "eslint": "10.14.0",
     "eslint-config-prettier": "10.1.8",
     "eslint-plugin-n": "18.5.0",
     "eslint-plugin-prettier": "5.5.7",
     "eslint-plugin-simple-import-sort": "13.0.0",
-    "globals": "17.13.0",
+    "globals": "17.14.0",
     "prettier": "3.9.10",
     "tsup": "^8.5.1",
     "typescript": "5.9.3",
-    "typescript-eslint": "8.71.2",
+    "typescript-eslint": "8.72.1",
     "vitest": "4.1.12"
   }
 }
