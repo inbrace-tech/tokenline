@@ -1,5 +1,11 @@
 # @inbrace-tech/tokenline
 
+## 1.6.1
+
+### Patch Changes
+
+- Fix the agent panel showing `cache: --` and no waiting state for every subagent on jq 1.8 (e.g. Ubuntu 26.04). ([#161](https://github.com/inbrace-tech/tokenline/pull/161) by [@ropdias](https://github.com/ropdias))
+
 ## 1.6.0
 
 ### Minor Changes
