@@ -804,15 +804,16 @@ scan_subagent_transcript() {
        # A background call answers at once ("running in background"); the
        # subagent may say a line, then idles until the job reports. Until a new
        # user entry that is not a tool result (the job notification) arrives,
-       # it is still waiting — just not inside a call.
+       # it is still waiting — just not inside a call. The binding is wrapped
+       # in parentheses: jq 1.8 binds `A and B as $x | C` as `(A and B) as $x`.
        elif ($call.input.run_in_background == true)
-          and ([$turns | to_entries[]
+          and (([$turns | to_entries[]
                 | select(.value.type == "assistant"
                     and ([.value.message.content[]? | select(.type == "tool_use")] | length) > 0)
                 | .key] | last) as $at
           | ($turns[($at + 1):]
              | all(.type == "assistant"
-                   or ([.message.content[]? | select(.type == "tool_result")] | length) > 0))
+                   or ([.message.content[]? | select(.type == "tool_result")] | length) > 0)))
        then "waiting-bg"
        else "last" end) as $mode
     | [($a | last | .timestamp // ""), $ttl, $tool, $mode]
